@@ -25,19 +25,3 @@ def dir_data_processed():
 
 def dir_notebooks():
     return CONFIG['NOTEBOOKS']['DIRECTORY']
-
-
-def experiment_server_url():
-    return CONFIG['MLFLOW']['SERVER_URL']
-
-
-def experiment_client_url():
-    return CONFIG['MLFLOW']['CLIENT_URL']
-
-
-def experiment_name():
-    return CONFIG['MLFLOW']['EXPERIMENT_NAME']
-
-
-def model_name():
-    return CONFIG['MLFLOW']['MODEL_NAME']

@@ -9,9 +9,3 @@ DATA:
 
 NOTEBOOKS:
   DIRECTORY: source/notebooks
-
-MLFLOW:
-  SERVER_URL: http://mlflow_server:1235
-  CLIENT_URL: http://127.0.0.1:1235
-  EXPERIMENT_NAME: credit
-  MODEL_NAME: credit_model
