@@ -1,4 +1,5 @@
 from abc import ABC
+import logging
 from typing import Callable, Optional, Tuple
 
 import numpy as np
@@ -14,12 +15,12 @@ class EarlyStopping:
 
     Altered from: https://github.com/Bjarten/early-stopping-pytorch/blob/master/pytorchtools.py
     """
-    def __init__(self, model, patience=7, verbose=False, delta=0, trace_func=print):
+    def __init__(self, model, patience=7, verbose=False, delta=0):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
                 Default: 7
-            verbose (bool): If True, prints a message for each validation loss improvement. 
+            verbose (bool): If True, prints a message for each validation loss improvement.
                             Default: False
             delta (float): Minimum change in the monitored quantity to qualify as an improvement.
                             Default: 0
@@ -31,12 +32,11 @@ class EarlyStopping:
         self._verbose = verbose
         self._counter = 0
         self._delta = delta
-        self._trace_func = trace_func
         self._index = -1
-        self.best_index = None 
+        self.best_index = None
         self.early_stop = False
         self.best_score = -np.Inf
-        self.min_validation_loss = None
+        self.min_validation_loss = np.Inf
         self.best_state = None
         self.save_checkpoint(validation_loss=np.NaN)
 
@@ -49,7 +49,7 @@ class EarlyStopping:
             self._counter += 1
             if self._verbose:
                 message = f'Early Stopping counter: {self._counter} out of {self._patience}'
-                self._trace_func(message)
+                logging.info(message)
             if self._counter >= self._patience:
                 self.early_stop = True
         else:
@@ -63,7 +63,7 @@ class EarlyStopping:
         if self._verbose:
             message = f'Validation loss decreased ({self.min_validation_loss:.6f} --> ' \
                 f'{validation_loss:.6f}). Saving model ...'
-            self._trace_func(message)
+            logging.info(message)
         self.best_state = self._model.state_dict()
         self.best_index = self._index
         self.min_validation_loss = validation_loss
@@ -78,7 +78,6 @@ class PyTorchNN(ABC):
             optimizer,
             early_stopping_patience=10,
             early_stopping_verbose=False,
-            early_stopping_trace_func=print,
             ) -> None:
         super().__init__()
         self._model = model
@@ -87,7 +86,6 @@ class PyTorchNN(ABC):
         self._early_stopping = None
         self._early_stopping_patience = early_stopping_patience
         self._early_stopping_verbose = early_stopping_verbose
-        self._early_stopping_trace_func = early_stopping_trace_func
 
     def _train_epoch(self, data_loader: DataLoader):
         """
@@ -121,7 +119,7 @@ class PyTorchNN(ABC):
     def train(self, X, y, num_epochs=200, batch_size=8, validation_size=0.1, random_seed=1):
         """
         Train a specific number of epochs
-        
+
         Args:
             X: tensor containing training data
             y: tensor containing training target values
@@ -132,14 +130,12 @@ class PyTorchNN(ABC):
                 stopping.
             random_seed: random seed/state
         """
-        
         assert self._early_stopping_patience is None or validation_size > 0
         if self._early_stopping_patience:
             self._early_stopping = EarlyStopping(
                 model=self._model,
                 patience=self._early_stopping_patience,
                 verbose=self._early_stopping_verbose,
-                trace_func=self._early_stopping_trace_func,
             )
         else:
             self._early_stopping = None
@@ -203,8 +199,7 @@ class FullyConnectedNN(PyTorchNN):
             loss_func: Callable,
             learning_rate: float,
             early_stopping_patience: int = 10,
-            early_stopping_verbose: bool = False,
-            early_stopping_trace_func: Callable = print,
+            early_stopping_verbose: bool = True,
             ) -> None:
 
         if hidden_units is None:
@@ -212,13 +207,13 @@ class FullyConnectedNN(PyTorchNN):
 
         all_layers = []
         for hidden_unit in hidden_units:
-            # print(f"Creating Linear layer with {input_size} input units and {hidden_unit} hidden units.")
+            # print(f"Creating Linear layer with {input_size} input units and {hidden_unit} hidden units.")  # noqa
             layer = nn.Linear(input_size, hidden_unit)
             all_layers.append(layer)
             all_layers.append(nn.ReLU())
             input_size = hidden_unit
 
-        # print(f"Creating output layer Linear layer with {input_size} input units and {hidden_units[-1]} output units.")
+        # print(f"Creating output layer Linear layer with {input_size} input units and {hidden_units[-1]} output units.")  # noqa
         all_layers.append(nn.Linear(hidden_units[-1], output_size))
         model = nn.Sequential(*all_layers)
         # https://pytorch.org/tutorials/beginner/basics/buildmodel_tutorial.html
@@ -231,5 +226,4 @@ class FullyConnectedNN(PyTorchNN):
             optimizer=optimizer,
             early_stopping_patience=early_stopping_patience,
             early_stopping_verbose=early_stopping_verbose,
-            early_stopping_trace_func=early_stopping_trace_func,
         )

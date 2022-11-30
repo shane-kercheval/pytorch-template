@@ -1,0 +1,14 @@
+click==8.*
+coverage==6.*
+helpsk==0.*
+flake8==4.*
+jupyter-contrib-nbextensions==0.*
+notebook==6.*
+numpy==1.*
+pandas==1.*
+plotly==5.*
+plotly-express==0.*
+pytest==7.*
+python-dateutil==2.*
+PyYAML==6.*
+scikit-learn==1.*
