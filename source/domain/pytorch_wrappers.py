@@ -11,11 +11,13 @@ from sklearn.model_selection import train_test_split
 
 class EarlyStopping:
     """
-    Early stops the training if validation loss doesn't improve after a given patience.
+    Early stops the training if validation loss doesn't improve after a given patience. Saves the
+    model state associated with the best/lowest validation loss and restores that state when early
+    stopping is triggered.
 
     Altered from: https://github.com/Bjarten/early-stopping-pytorch/blob/master/pytorchtools.py
     """
-    def __init__(self, model, patience=7, verbose=False, delta=0):
+    def __init__(self, model, patience: int = 7, verbose: bool = False, delta: float = 0):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -24,8 +26,6 @@ class EarlyStopping:
                             Default: False
             delta (float): Minimum change in the monitored quantity to qualify as an improvement.
                             Default: 0
-            trace_func (function): trace print function.
-                            Default: print
         """
         self._model = model
         self._patience = patience
@@ -35,38 +35,32 @@ class EarlyStopping:
         self._index = -1
         self.best_index = None
         self.early_stop = False
-        self.best_score = -np.Inf
-        self.min_validation_loss = np.Inf
-        self.best_state = None
-        self.save_checkpoint(validation_loss=np.NaN)
+        self.lowest_loss = np.Inf
+        self.best_state = model.state_dict()
 
     def __call__(self, validation_loss):
         assert not self.early_stop
         self._index += 1
-        score = -validation_loss
-        if score < self.best_score + self._delta:
+        if validation_loss < self.lowest_loss - abs(self._delta):
+            # loss decreased; restart counter and save the model's state
+            if self._verbose:
+                logging.info(
+                    f'Validation loss decreased ({self.lowest_loss:.6f} --> '
+                    f'{validation_loss:.6f}). Caching model state.'
+                )
+            self.best_state = self._model.state_dict()
+            self.best_index = self._index
+            self.lowest_loss = validation_loss
+            self._counter = 0
+        else:
             # if the score has not improved (i.e. loss has not decreased) then increment counter
             self._counter += 1
             if self._verbose:
-                message = f'Early Stopping counter: {self._counter} out of {self._patience}'
-                logging.info(message)
+                logging.info(
+                    f'Early Stopping counter: {self._counter} out of {self._patience}'
+                )
             if self._counter >= self._patience:
                 self.early_stop = True
-        else:
-            # loss decreased; restart counter and save the model's state
-            self.best_score = score
-            self.save_checkpoint(validation_loss)
-            self._counter = 0
-
-    def save_checkpoint(self, validation_loss):
-        '''Saves model when validation loss decrease.'''
-        if self._verbose:
-            message = f'Validation loss decreased ({self.min_validation_loss:.6f} --> ' \
-                f'{validation_loss:.6f}). Saving model ...'
-            logging.info(message)
-        self.best_state = self._model.state_dict()
-        self.best_index = self._index
-        self.min_validation_loss = validation_loss
 
 
 class PyTorchNN(ABC):
@@ -77,6 +71,7 @@ class PyTorchNN(ABC):
             loss_func,
             optimizer,
             early_stopping_patience=10,
+            early_stopping_delta: float = 0,
             early_stopping_verbose=False,
             ) -> None:
         super().__init__()
@@ -85,6 +80,7 @@ class PyTorchNN(ABC):
         self._optimizer = optimizer
         self._early_stopping = None
         self._early_stopping_patience = early_stopping_patience
+        self._early_stopping_delta = early_stopping_delta
         self._early_stopping_verbose = early_stopping_verbose
 
     def _train_epoch(self, data_loader: DataLoader):
@@ -135,6 +131,7 @@ class PyTorchNN(ABC):
             self._early_stopping = EarlyStopping(
                 model=self._model,
                 patience=self._early_stopping_patience,
+                delta=self._early_stopping_delta,
                 verbose=self._early_stopping_verbose,
             )
         else:
@@ -199,6 +196,7 @@ class FullyConnectedNN(PyTorchNN):
             loss_func: Callable,
             learning_rate: float,
             early_stopping_patience: int = 10,
+            early_stopping_delta: float = 0,
             early_stopping_verbose: bool = True,
             ) -> None:
 
@@ -225,5 +223,6 @@ class FullyConnectedNN(PyTorchNN):
             loss_func=loss_func,
             optimizer=optimizer,
             early_stopping_patience=early_stopping_patience,
+            early_stopping_delta=early_stopping_delta,
             early_stopping_verbose=early_stopping_verbose,
         )
