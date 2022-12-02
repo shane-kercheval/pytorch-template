@@ -16,7 +16,7 @@ docker_rebuild:
 docker_bash:
 	docker compose -f docker-compose.yml up --build bash
 
-docker_open: notebook mlflow_ui zsh
+docker_open: notebook zsh
 
 notebook:
 	open 'http://127.0.0.1:8888/?token=d4484563805c48c9b55f75eb8b28b3797c6757ad4871776d'
@@ -27,20 +27,6 @@ zsh:
 docker_all:
 	docker compose run --no-deps --entrypoint "make all" bash
 
-####
-# MLFLOW
-####
-mlflow_ui:
-	open 'http://127.0.0.1:1235'
-
-mlflow_kill:
-	 pkill -f gunicorn
-
-mlflow_clean:
-	rm -rf mlruns
-	rm -f mlflow.db
-	rm -rf mlflow-artifact-root
-	rm -rf mlflow_server/1235
 
 ####
 # Project
@@ -73,10 +59,10 @@ remove_logs:
 	rm -f output/log.log
 
 ## Run entire workflow.
-all: data tests remove_logs exploration experiments
+all: data tests remove_logs pytorch_fully
 
 ## Delete all generated files (e.g. virtual)
-clean: mlflow_clean
+clean:
 	rm -f data/raw/*.pkl
 	rm -f data/raw/*.csv
 	rm -f data/processed/*
