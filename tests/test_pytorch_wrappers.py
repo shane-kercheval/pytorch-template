@@ -68,6 +68,8 @@ def test_FullyConnectedNN_training(dummy_x_y):
     train_loss, validation_loss = model.train(X=X, y=y)
     assert len(train_loss) == model._early_stopping._index + 1
     assert len(validation_loss) == model._early_stopping._index + 1
+    assert (~np.isnan(train_loss)).all()
+    assert (~np.isnan(validation_loss)).all()
 
 
 def test_FullyConnectedNN_training_no_early_stopping_no_validation(dummy_x_y):
@@ -91,10 +93,11 @@ def test_FullyConnectedNN_training_verbose(dummy_x_y):
         input_size=X.shape[1],
         output_size=1,
         loss_func=nn.MSELoss(),
-        early_stopping_patience=None,
         verbose=True,
     )
-    train_loss, validation_loss = model.train(X=X, y=y, validation_size=0)
+    train_loss, validation_loss = model.train(X=X, y=y, validation_size=0.1)
     assert len(train_loss) > 0
-    assert len(validation_loss) == len(train_loss)
-    assert np.isnan(validation_loss).all()
+    assert len(train_loss) == model._early_stopping._index + 1
+    assert len(validation_loss) == model._early_stopping._index + 1
+    assert (~np.isnan(train_loss)).all()
+    assert (~np.isnan(validation_loss)).all()
