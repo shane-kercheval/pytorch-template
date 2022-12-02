@@ -70,9 +70,9 @@ class PyTorchNN(ABC):
             model,
             loss_func,
             optimizer,
-            early_stopping_patience=10,
+            early_stopping_patience: Optional[int] = 10,
             early_stopping_delta: float = 0,
-            early_stopping_verbose=False,
+            verbose: bool = False,
             ) -> None:
         super().__init__()
         self._model = model
@@ -81,7 +81,7 @@ class PyTorchNN(ABC):
         self._early_stopping = None
         self._early_stopping_patience = early_stopping_patience
         self._early_stopping_delta = early_stopping_delta
-        self._early_stopping_verbose = early_stopping_verbose
+        self._verbose = verbose
 
     def _train_epoch(self, data_loader: DataLoader):
         """
@@ -132,7 +132,7 @@ class PyTorchNN(ABC):
                 model=self._model,
                 patience=self._early_stopping_patience,
                 delta=self._early_stopping_delta,
-                verbose=self._early_stopping_verbose,
+                verbose=self._verbose,
             )
         else:
             self._early_stopping = None
@@ -195,9 +195,9 @@ class FullyConnectedNN(PyTorchNN):
             loss_func: Callable,
             hidden_units: Optional[Tuple[int]] = None,
             learning_rate: float = 0.001,
-            early_stopping_patience: int = 10,
+            early_stopping_patience: Optional[int] = 10,
             early_stopping_delta: float = 0,
-            early_stopping_verbose: bool = True,
+            verbose: bool = False,
             ) -> None:
 
         if hidden_units is None:
@@ -225,5 +225,5 @@ class FullyConnectedNN(PyTorchNN):
             optimizer=optimizer,
             early_stopping_patience=early_stopping_patience,
             early_stopping_delta=early_stopping_delta,
-            early_stopping_verbose=early_stopping_verbose,
+            verbose=verbose,
         )

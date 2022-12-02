@@ -114,7 +114,6 @@ def test_early_stopping_delta_1():
     This function tests the EarlyStopping class outside of the PyTorchNN classes so that we
     can control the validation loss values that are used.
     """
-
     class MockPytorchModel():
         def __init__(self) -> None:
             self._state = -1
