@@ -75,6 +75,8 @@ class PyTorchNN(ABC):
             verbose: bool = False,
             ) -> None:
         super().__init__()
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = model.to(device)
         self._model = model
         self._loss_func = loss_func
         self._optimizer = optimizer
@@ -216,8 +218,6 @@ class FullyConnectedNN(PyTorchNN):
         self.layers.append(nn.Linear(hidden_units[-1], output_size))
         model = nn.Sequential(*self.layers)
         # https://pytorch.org/tutorials/beginner/basics/buildmodel_tutorial.html
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        model = model.to(device)
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
         super().__init__(
             model=model,
