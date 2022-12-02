@@ -192,9 +192,9 @@ class FullyConnectedNN(PyTorchNN):
             self,
             input_size: int,
             output_size: int,
-            hidden_units: Optional[Tuple[int]],
             loss_func: Callable,
-            learning_rate: float,
+            hidden_units: Optional[Tuple[int]] = None,
+            learning_rate: float = 0.001,
             early_stopping_patience: int = 10,
             early_stopping_delta: float = 0,
             early_stopping_verbose: bool = True,
@@ -203,17 +203,18 @@ class FullyConnectedNN(PyTorchNN):
         if hidden_units is None:
             hidden_units = [50, 20]
 
-        all_layers = []
+        self.hidden_units = hidden_units
+        self.layers = []
         for hidden_unit in hidden_units:
             # print(f"Creating Linear layer with {input_size} input units and {hidden_unit} hidden units.")  # noqa
             layer = nn.Linear(input_size, hidden_unit)
-            all_layers.append(layer)
-            all_layers.append(nn.ReLU())
+            self.layers.append(layer)
+            self.layers.append(nn.ReLU())
             input_size = hidden_unit
 
         # print(f"Creating output layer Linear layer with {input_size} input units and {hidden_units[-1]} output units.")  # noqa
-        all_layers.append(nn.Linear(hidden_units[-1], output_size))
-        model = nn.Sequential(*all_layers)
+        self.layers.append(nn.Linear(hidden_units[-1], output_size))
+        model = nn.Sequential(*self.layers)
         # https://pytorch.org/tutorials/beginner/basics/buildmodel_tutorial.html
         device = "cuda" if torch.cuda.is_available() else "cpu"
         model = model.to(device)
