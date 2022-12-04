@@ -169,7 +169,7 @@ class PyTorchNN(ABC):
             if self._verbose:
                 logging.info(
                     f"Epoch {epoch}: Training Loss={train_loss:.3f}; "
-                    "Validation Loss={validation_loss:.3f}"
+                    f"Validation Loss={validation_loss:.3f}"
                 )
 
             if self._early_stopping:
