@@ -91,7 +91,9 @@ class PyTorchNN(ABC):
         """
         self._model.train()
         for x_batch, y_batch in data_loader:
-            pred = self._model(x_batch)[:, 0]
+            pred = self._model(x_batch)
+            if self._model[-1].out_features == 1:  # if output is 1 dim, extract array
+                pred = pred[:, 0]
             loss = self._loss_func(pred, y_batch)
             loss.backward()
             self._optimizer.step()
@@ -186,7 +188,9 @@ class PyTorchNN(ABC):
         """Use the model to generate predictions from `X`."""
         self._model.eval()
         with torch.no_grad():
-            pred = self._model(X)[:, 0]
+            pred = self._model(X)
+            if self._model[-1].out_features == 1:  # if output is 1 dim, extract array
+                pred = pred[:, 0]
         return pred
 
 
@@ -202,7 +206,9 @@ class FullyConnectedNN(PyTorchNN):
             output_size: int,
             loss_func: Callable,
             hidden_units: Optional[Tuple[int]] = None,
+            optimizer_func=torch.optim.SGD,
             learning_rate: float = 0.001,
+            initial_layers: Optional[list] = None,
             early_stopping_patience: Optional[int] = 10,
             early_stopping_delta: float = 0,
             verbose: bool = False,
@@ -212,7 +218,11 @@ class FullyConnectedNN(PyTorchNN):
             hidden_units = [50, 20]
 
         self.hidden_units = hidden_units
-        self.layers = []
+        if initial_layers:
+            assert isinstance(initial_layers, list)
+            self.layers = initial_layers
+        else:
+            self.layers = []
         for hidden_unit in hidden_units:
             # print(f"Creating Linear layer with {input_size} input units and {hidden_unit} hidden units.")  # noqa
             layer = nn.Linear(input_size, hidden_unit)
@@ -224,7 +234,7 @@ class FullyConnectedNN(PyTorchNN):
         self.layers.append(nn.Linear(hidden_units[-1], output_size))
         model = nn.Sequential(*self.layers)
         # https://pytorch.org/tutorials/beginner/basics/buildmodel_tutorial.html
-        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+        optimizer = optimizer_func(model.parameters(), lr=learning_rate)
         super().__init__(
             model=model,
             loss_func=loss_func,

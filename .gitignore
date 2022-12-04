@@ -133,3 +133,4 @@ dmypy.json
 data/raw/*
 
 !tests/test_files/log.log
+MNIST/*
