@@ -99,7 +99,7 @@ class PyTorchNN(ABC):
 
     def _eval_epoch(self, X_train, y_train, X_validation, y_validation):
         """
-        Evaluation over a single epoch.
+        Evaluation of training/validation sets over a single epoch.assert 
         """
         pred = self.predict(X=X_train)
         loss = self._loss_func(pred, y_train)
