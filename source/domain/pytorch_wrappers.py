@@ -99,7 +99,7 @@ class PyTorchNN(ABC):
 
     def _eval_epoch(self, X_train, y_train, X_validation, y_validation):
         """
-        Evaluation of training/validation sets over a single epoch.assert 
+        Evaluation of training/validation sets over a single epoch.
         """
         pred = self.predict(X=X_train)
         loss = self._loss_func(pred, y_train)
@@ -165,6 +165,12 @@ class PyTorchNN(ABC):
 
             loss_hist_train[epoch] = train_loss
             loss_hist_validation[epoch] = validation_loss
+
+            if self._verbose:
+                logging.info(
+                    f"Epoch {epoch}: Training Loss={train_loss:.3f}; "
+                    "Validation Loss={validation_loss:.3f}"
+                )
 
             if self._early_stopping:
                 self._early_stopping(validation_loss=validation_loss)
