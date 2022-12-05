@@ -159,6 +159,7 @@ class PyTorchNN(ABC):
         assert len(X_t) == len(y_t)
         training_loader = DataLoader(TensorDataset(X_t, y_t), batch_size=batch_size, shuffle=True)
         for epoch in range(num_epochs):
+            torch.manual_seed(random_seed)
             self._train_epoch(data_loader=training_loader)
 
             train_loss, validation_loss = self._eval_epoch(
