@@ -1,4 +1,4 @@
-FROM python:3.9
+FROM python:3.11
 
 WORKDIR /code
 ENV PYTHONPATH "${PYTHONPATH}:/code"
@@ -15,5 +15,4 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN rm requirements.txt
 
-# RUN pip3 install torch torchvision torchaudio
-RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
+RUN pip3 install torch torchvision torchaudio
