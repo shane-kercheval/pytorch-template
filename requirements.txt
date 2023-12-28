@@ -4,6 +4,7 @@ helpsk
 jupyter-contrib-nbextensions
 notebook
 numpy
+onnx
 pandas
 plotly
 plotly-express
@@ -13,4 +14,5 @@ python-dotenv
 PyYAML
 ruff
 scikit-learn
+tqdm
 wandb

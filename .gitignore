@@ -135,3 +135,4 @@ data/raw/*
 !tests/test_files/log.log
 MNIST/*
 wandb/
+model.onnx

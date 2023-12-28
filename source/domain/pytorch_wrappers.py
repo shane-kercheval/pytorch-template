@@ -367,8 +367,8 @@ class FullyConnectedNN(nn.Module):
 # class FullyConnectedNN(PyTorchNN):
 #     """
 #     Implements a feed-forward fully connected PyTorch neural network. The number of
-#     hidden layers is dynamic and based on the size of the `hidden_units` parameter, which is a list
-#     that indicates the size of each hidden layer.
+#     hidden layers is dynamic and based on the size of the `hidden_units` parameter, which is a
+#     list that indicates the size of each hidden layer.
 #     """
 
 #     def __init__(
