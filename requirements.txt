@@ -9,6 +9,8 @@ plotly
 plotly-express
 pytest
 python-dateutil
+python-dotenv
 PyYAML
 ruff
 scikit-learn
+wandb
