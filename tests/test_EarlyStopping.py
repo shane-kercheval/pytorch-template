@@ -112,7 +112,7 @@ def test_early_stopping_delta_0():  # noqa
         early_stopping(loss=current_lowest_loss - 1)
 
 
-def test_early_stopping_delta_1():  # noqa
+def test_early_stopping_delta_absolute_1():  # noqa
     """
     Tests the EarlyStopping class using a mock model so that we can control the validation loss
     values that are used.
@@ -126,7 +126,7 @@ def test_early_stopping_delta_1():  # noqa
             return {'state': self._state}
 
     mock_model = MockPytorchModel()
-    early_stopping = EarlyStopping(model=mock_model, verbose=False, delta=1)
+    early_stopping = EarlyStopping(model=mock_model, verbose=False, delta=1, delta_type='absolute')
     assert not early_stopping.is_stopped
     assert early_stopping._counter == 0
     assert early_stopping.lowest_loss is np.Inf
@@ -192,6 +192,105 @@ def test_early_stopping_delta_1():  # noqa
     # past the point where we should have stopped
     with pytest.raises(AssertionError):
         early_stopping(loss=current_lowest_loss - 1)
+
+
+def test_early_stopping_delta_percent_5():  # noqa
+    """
+    Tests the EarlyStopping class using a mock model so that we can control the validation loss
+    values that are used.
+    """
+    class MockPytorchModel:
+        def __init__(self) -> None:
+            self._state = -1
+
+        def state_dict(self) -> dict:
+            self._state += 1
+            return {'state': self._state}
+
+    mock_model = MockPytorchModel()
+    early_stopping = EarlyStopping(
+        model=mock_model,
+        verbose=False,
+        delta=0.05,  # 5%
+        delta_type='percent',
+    )
+    assert not early_stopping.is_stopped
+    assert early_stopping._counter == 0
+    assert early_stopping.lowest_loss is np.Inf
+    assert early_stopping.best_state == {'state': 0}
+    assert early_stopping.best_index is None
+
+    # initial validation will automatically be captured because it is less than the default of Inf
+    assert not early_stopping(loss=100)
+    assert not early_stopping.is_stopped
+    assert early_stopping._counter == 0
+    assert early_stopping._index == 0
+    assert early_stopping.best_index == 0
+    assert early_stopping.lowest_loss == 100
+    assert early_stopping.best_state == {'state': 1}
+
+    # a drop of 5 from 100 is 95, which is exactly 5%, so it should not be captured as a better
+    # because it is not **beyond** our delta of 5%
+    assert not early_stopping(loss=95)
+    assert not early_stopping.is_stopped
+    assert early_stopping._counter == 1
+    assert early_stopping._index == 1
+    assert early_stopping.best_index == 0
+    assert early_stopping.lowest_loss == 100
+    assert early_stopping.best_state == {'state': 1}
+
+
+    # now we are going to test out a lower/better loss that is beyond our delta of 5%
+    # a value of 94.99 should be captured as a better loss and should not increment the early
+    # stopping counter
+    assert not early_stopping(loss=94.99)
+    assert not early_stopping.is_stopped
+    assert early_stopping._counter == 0
+    assert early_stopping._index == 2
+    assert early_stopping.best_index == 2
+    assert early_stopping.lowest_loss == 94.99
+    assert early_stopping.best_state == {'state': 2}
+
+    # now we are going to test out a lower/better loss that is *not* beyond our delta of 1
+    # a value of 97.99 (exactly 1 less than our current lowest loss of 94.99) should *not* be
+    # captured as a better loss and *should* increment the early stopping counter
+    model_state = early_stopping._model.state_dict()  # mimic state transition
+    assert model_state == {'state': 3}
+    assert not early_stopping(loss=93.99)
+    assert not early_stopping.is_stopped
+    assert early_stopping._counter == 1
+    assert early_stopping._index == 3
+    assert early_stopping.best_index == 2
+    assert early_stopping.lowest_loss == 94.99
+    assert early_stopping.best_state == {'state': 2}
+
+    current_lowest_loss = 94.99
+    for index in range(5):
+        model_state = early_stopping._model.state_dict()  # mimic state transition
+        assert model_state == {'state': 4 + index}
+        assert not early_stopping(loss=current_lowest_loss * 0.95)
+        assert not early_stopping.is_stopped
+        assert early_stopping._counter == index + 2
+        assert early_stopping._index == index + 4
+        assert early_stopping.best_index == 2
+        assert early_stopping.lowest_loss == current_lowest_loss
+        assert early_stopping.best_state == {'state': 2}
+
+    model_state = early_stopping._model.state_dict()  # mimic state transition
+    assert model_state == {'state': 9}
+    assert early_stopping(loss=current_lowest_loss * 0.95)
+    assert early_stopping.is_stopped
+    assert early_stopping._counter == 7
+    assert early_stopping._index == 9
+    assert early_stopping.best_index == 2
+    assert early_stopping.lowest_loss == current_lowest_loss
+    assert early_stopping.best_state == {'state': 2}
+
+    # this should fail, we should not be able to keep calling early_stopping if we are already
+    # past the point where we should have stopped
+    with pytest.raises(AssertionError):
+        early_stopping(loss=current_lowest_loss - 1)
+
 
 
 def test_early_stopping_with_reset():  # noqa

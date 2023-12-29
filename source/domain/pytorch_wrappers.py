@@ -24,6 +24,7 @@ class EarlyStopping:
             model: nn.Module,
             patience: int = 7,
             delta: float = 0,
+            delta_type: str = 'percent',
             verbose: bool = False,
             ):
         """
@@ -31,6 +32,11 @@ class EarlyStopping:
             model: PyTorch model to save state of.
             patience: How long (in calls) to wait after last time validation loss improved.
             delta: Minimum change in the monitored quantity to qualify as an improvement.
+            delta_type:
+                The type of delta to use. Either 'percent' or 'absolute'. If 'percent', the
+                delta is a percentage of the previous lowest loss. For example, a value of 0.10
+                indicates a 10% change in the new loss from the previous lowest loss will trigger
+                early stopping. If 'absolute', the delta is an absolute value.
             previous_lowest_loss: The lowest validation loss score from a previous training run.
             verbose: If True, prints a message for each validation loss improvement.
         """
@@ -39,6 +45,9 @@ class EarlyStopping:
         self._verbose = verbose
         self._counter = 0
         self._delta = delta
+        if delta_type not in ('percent', 'absolute'):
+            raise ValueError(f"Invalid delta_type: {delta_type}")
+        self._delta_type = delta_type
         self._index = -1
         self.is_stopped = False
         self.best_index = None
@@ -55,7 +64,19 @@ class EarlyStopping:
         """
         assert not self.is_stopped
         self._index += 1
-        if loss < self.lowest_loss - abs(self._delta):
+
+        loss_decrease = False
+        if self._delta_type == 'percent':
+            if loss < self.lowest_loss * (1 - self._delta):
+                loss_decrease = True
+        elif self._delta_type == 'absolute':
+            if loss < self.lowest_loss - abs(self._delta):
+                loss_decrease = True
+        else:
+            raise ValueError(f"Invalid delta_type: {self._delta_type}")
+
+        if loss_decrease:
+        # if loss < self.lowest_loss - abs(self._delta):
             # loss decreased; restart counter and save the model's state
             if self._verbose:
                 logging.info(
