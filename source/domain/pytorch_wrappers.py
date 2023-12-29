@@ -24,7 +24,6 @@ class EarlyStopping:
             model: nn.Module,
             patience: int = 7,
             delta: float = 0,
-            previous_lowest_loss: float | None = None,
             verbose: bool = False,
             ):
         """
@@ -42,11 +41,11 @@ class EarlyStopping:
         self._delta = delta
         self._index = -1
         self.is_stopped = False
-        self.best_index = -1 if previous_lowest_loss else None
-        self.lowest_loss = previous_lowest_loss if previous_lowest_loss else np.Inf
+        self.best_index = None
+        self.lowest_loss = np.Inf
         self.best_state = model.state_dict()
 
-    def __call__(self, loss: float):
+    def __call__(self, loss: float) -> bool:
         """
         Runs the early stopping logic and saves the model's state if the validation loss score
         improved. If the validation loss score did not improve, the counter is incremented.
@@ -76,6 +75,13 @@ class EarlyStopping:
                 )
             if self._counter >= self._patience:
                 self.is_stopped = True
+
+        return self.is_stopped
+
+    def reset(self) -> None:
+        """Reset the early stopping counter and restore the model's best state."""
+        self.is_stopped = False
+        self._counter = 0
 
 
 def calculate_average_loss(
@@ -252,13 +258,15 @@ class PyTorchTrainer:
 
         # if we have previous early stopping state, restore it
         if self.early_stopping_patience:
-            previous_lowest_loss = self.early_stopping.lowest_loss if self.early_stopping else None
-            self.early_stopping = EarlyStopping(
-                model=self.model,
-                patience=self.early_stopping_patience,
-                delta=self.early_stopping_delta,
-                previous_lowest_loss=previous_lowest_loss,
-                verbose=self.verbose,
+            # if we have already initialized early stopping, reset it
+            if self.early_stopping:
+                self.early_stopping.reset()
+            else:
+                self.early_stopping = EarlyStopping(
+                    model=self.model,
+                    patience=self.early_stopping_patience,
+                    delta=self.early_stopping_delta,
+                    verbose=self.verbose,
             )
         else:
             self.early_stopping = None
@@ -301,13 +309,11 @@ class PyTorchTrainer:
                     f"Epoch {epoch}: Training Loss={average_training_loss:.3f}; "
                     f"Validation Loss={average_validation_loss:.3f}",
                 )
-            if self.early_stopping:
-                self.early_stopping(loss=average_validation_loss)
-                if self.early_stopping.is_stopped:
-                    self.model.load_state_dict(self.early_stopping.best_state)
-                    loss_hist_train = loss_hist_train[0:self.early_stopping._index + 1]
-                    loss_hist_validation = loss_hist_validation[0:self.early_stopping._index + 1]
-                    break
+            if self.early_stopping and self.early_stopping(loss=average_validation_loss):
+                self.model.load_state_dict(self.early_stopping.best_state)
+                loss_hist_train = loss_hist_train[0:self.early_stopping._index + 1]
+                loss_hist_validation = loss_hist_validation[0:self.early_stopping._index + 1]
+                break
 
         return loss_hist_train, loss_hist_validation
 

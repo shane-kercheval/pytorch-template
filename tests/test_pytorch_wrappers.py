@@ -79,16 +79,16 @@ def test_FullyConnectedNN_training(dummy_x_y):  # noqa
 
     # train again, but with learning rate so high that we won't improve the loss
     # make sure we retain the same lowest loss and state dict
-    train_loss, validation_loss = trainer.train(
+    train_loss_new, validation_loss_new = trainer.train(
         x=x,
         y=y,
         epochs=10,
         optimizer=optim.Adam(model.parameters(), lr=1000),
     )
-    assert len(train_loss) == trainer.early_stopping._index + 1
-    assert len(validation_loss) == trainer.early_stopping._index + 1
-    assert (~np.isnan(train_loss)).all()
-    assert (~np.isnan(validation_loss)).all()
+    assert len(train_loss) + len(train_loss_new) == trainer.early_stopping._index + 1
+    assert len(validation_loss) + len(validation_loss_new) == trainer.early_stopping._index + 1
+    assert (~np.isnan(train_loss_new)).all()
+    assert (~np.isnan(validation_loss_new)).all()
     # lowest loss should not have changed
     assert trainer.best_validation_loss == lowest_loss
     assert_states_are_same(model.state_dict(), best_state_dict)
