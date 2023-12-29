@@ -194,7 +194,7 @@ def test_early_stopping_delta_absolute_1():  # noqa
         early_stopping(loss=current_lowest_loss - 1)
 
 
-def test_early_stopping_delta_percent_5():  # noqa
+def test_early_stopping_delta_relative_5():  # noqa
     """
     Tests the EarlyStopping class using a mock model so that we can control the validation loss
     values that are used.
@@ -212,7 +212,7 @@ def test_early_stopping_delta_percent_5():  # noqa
         model=mock_model,
         verbose=False,
         delta=0.05,  # 5%
-        delta_type='percent',
+        delta_type='relative',
     )
     assert not early_stopping.is_stopped
     assert early_stopping._counter == 0

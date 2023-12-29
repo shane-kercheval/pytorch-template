@@ -24,7 +24,7 @@ class EarlyStopping:
             model: nn.Module,
             patience: int = 7,
             delta: float = 0,
-            delta_type: str = 'percent',
+            delta_type: str = 'relative',
             verbose: bool = False,
             ):
         """
@@ -33,7 +33,7 @@ class EarlyStopping:
             patience: How long (in calls) to wait after last time validation loss improved.
             delta: Minimum change in the monitored quantity to qualify as an improvement.
             delta_type:
-                The type of delta to use. Either 'percent' or 'absolute'. If 'percent', the
+                The type of delta to use. Either 'relative' or 'absolute'. If 'relative', the
                 delta is a percentage of the previous lowest loss. For example, a value of 0.10
                 indicates a 10% change in the new loss from the previous lowest loss will trigger
                 early stopping. If 'absolute', the delta is an absolute value.
@@ -45,7 +45,7 @@ class EarlyStopping:
         self._verbose = verbose
         self._counter = 0
         self._delta = delta
-        if delta_type not in ('percent', 'absolute'):
+        if delta_type not in ('relative', 'absolute'):
             raise ValueError(f"Invalid delta_type: {delta_type}")
         self._delta_type = delta_type
         self._index = -1
@@ -66,7 +66,7 @@ class EarlyStopping:
         self._index += 1
 
         loss_decrease = False
-        if self._delta_type == 'percent':
+        if self._delta_type == 'relative':
             if loss < self.lowest_loss * (1 - self._delta):
                 loss_decrease = True
         elif self._delta_type == 'absolute':
