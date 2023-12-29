@@ -75,13 +75,13 @@ class EarlyStopping:
         else:
             raise ValueError(f"Invalid delta_type: {self._delta_type}")
 
+        percent_change = f'{(loss - self.lowest_loss) / self.lowest_loss:.1%}'
         if loss_decrease:
-        # if loss < self.lowest_loss - abs(self._delta):
             # loss decreased; restart counter and save the model's state
             if self._verbose:
                 logging.info(
-                    f'Validation loss decreased ({self.lowest_loss:.6f} --> '
-                    f'{loss:.6f}). Caching model state.',
+                    f'Early stopping: loss decreased ({self.lowest_loss:.3f} -> '
+                    f'{loss:.3f}; {percent_change}). Caching model state.',
                 )
             self.best_state = self._model.state_dict()
             self.best_index = self._index
@@ -92,7 +92,8 @@ class EarlyStopping:
             self._counter += 1
             if self._verbose:
                 logging.info(
-                    f'Early Stopping counter: {self._counter} out of {self._patience}',
+                    f'Early stopping: no decrease ({self.lowest_loss:.3f} vs {loss:.3f}); '
+                    f'counter: {self._counter} out of {self._patience}',
                 )
             if self._counter >= self._patience:
                 self.is_stopped = True
