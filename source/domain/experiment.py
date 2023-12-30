@@ -63,7 +63,6 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
     with wandb.init(project=project, config=config, tags=tags, notes=notes):
         config = wandb.config
         pprint.pprint(config)
-
         x_train, x_val, x_test, y_train, y_val, y_test = get_data(architecture=config.architecture)
         device = config.device if 'device' in config else None
         # make the model, data, and optimization problem
@@ -96,13 +95,17 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
             num_reduce_learning_rate=config.num_reduce_learning_rate,
         )
         # and test its final performance
-        test(model, test_loader, criterion)
-
+        test(
+            model=model,
+            test_loader=test_loader,
+            x_test=x_test,
+            criterion=criterion,
+            device=device,
+        )
         # Save the model in the exchangeable ONNX format
         x, _ = next(iter(test_loader))
         torch.onnx.export(model, x.to(device) , 'model.onnx')
         wandb.save('model.onnx')
-
     return model
 
 
