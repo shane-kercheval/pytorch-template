@@ -1,11 +1,12 @@
 project: pytorch-demo
-method: grid
+# method: grid
 # method: random
-# method: bayes
+method: bayes
 metric:
   # set this to `validation_loss` if using `bayes` method above
   # setting this to test_loss so that w&b will use that to generate the parallel coordinates
-  name: test_loss
+  # best_validation_loss is the loss from the best early stopping epoch
+  name: best_validation_loss
   goal: minimize
 parameters:
   ####

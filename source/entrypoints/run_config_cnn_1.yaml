@@ -3,12 +3,13 @@ tags:
   - pytorch
   - demo
 notes: First run with a simple CNN
+architecture: CNN
 epochs: 20
 classes: 10
 kernels:
   - 16
   - 32
 batch_size: 64
-optimizer: Adam
+optimizer: adam
 learning_rate: 0.01
-architecture: CNN
+num_reduce_learning_rate: 3  # we decrease the learning rate 5 times

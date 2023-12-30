@@ -9,7 +9,7 @@ def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
     model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
         make_objects(
             *mnist_fc,
-            model_type='FC',
+            architecture='FC',
             batch_size=55,
             kernels=None,
             layers=[64, 32],
@@ -56,7 +56,7 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
         make_objects(
             *mnist_cnn,
-            model_type='CNN',
+            architecture='CNN',
             batch_size=55,
             kernels=[8, 16],
             layers=None,
@@ -106,7 +106,7 @@ def test__train__fc(mnist_fc):  # noqa
     model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
         make_objects(
             *mnist_fc,
-            model_type='FC',
+            architecture='FC',
             batch_size=128,
             kernels=None,
             layers=[64],
@@ -139,7 +139,7 @@ def test__train__cnn(mnist_cnn):  # noqa
     model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
         make_objects(
             *mnist_cnn,
-            model_type='CNN',
+            architecture='CNN',
             batch_size=128,
             kernels=[8, 16],
             layers=None,

@@ -46,10 +46,10 @@ tests: linting
 open_coverage:
 	open 'htmlcov/index.html'
 
-data_extract:
-	python source/entrypoints/cli.py extract
-
-data: data_extract
+run_config_cnn_1:
+	python source/entrypoints/cli.py run \
+		--config_file source/entrypoints/run_config_cnn_1.yaml
+		--device cuda
 
 pytorch_fully:
 	jupyter nbconvert --execute --to html source/notebooks/pytorch_fully_connected.ipynb

@@ -1,6 +1,4 @@
-"""
-TODO:
-"""
+"""Command line interface for running experiments with Weights and Biases."""
 
 import pprint
 import numpy as np
@@ -13,33 +11,14 @@ import click
 import torch
 from source.domain.experiment import model_pipeline
 
+from dotenv import load_dotenv
+load_dotenv()  # EXPECTS WANDB_API_KEY TO BE SET IN .env FILE
+
 
 logging.config.fileConfig(
     os.path.join(os.getcwd(), '/code/source/config/logging.conf'),
     disable_existing_loggers=False,
 )
-
-
-# def get_data(architecture: str):  # noqa
-#     """Function is required by and called from `model_pipeline()`."""
-#     assert architecture in ['FC', 'CNN'], f"Architecture {architecture} not supported."
-
-#     x, y = fetch_openml('mnist_784', version=1, return_X_y=True, parser='auto')
-#     x = torch.tensor(x.values, dtype=torch.float32)
-#     y = torch.tensor(y.astype(int).values, dtype=torch.long)
-
-#     if architecture == 'CNN':
-#         # Reshape data to have channel dimension
-#         # MNIST images are 28x28, so we reshape them to [batch_size, 1, 28, 28]
-#         x = x.reshape(-1, 1, 28, 28)
-
-#     # 80% train; 10% validation; 10% test
-#     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
-#     x_test, x_val, y_test, y_val = train_test_split(x_test, y_test, test_size=0.5, random_state=42)
-#     logging.info(f"Training set  : X-{x_train.shape}, y-{y_train.shape}")
-#     logging.info(f"Validation set: X-{x_val.shape}, y-{y_val.shape}")
-#     logging.info(f"Test set      : X-{x_test.shape}, y-{y_test.shape}")
-#     return x_train, x_val, x_test, y_train, y_val, y_test
 
 
 @click.group()

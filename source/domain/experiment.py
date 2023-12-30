@@ -75,7 +75,7 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
                 y_train=y_train,
                 y_val=y_val,
                 y_test=y_test,
-                model_type=config.model_type,
+                architecture=config.architecture,
                 batch_size=config.batch_size,
                 kernels=config.kernels if 'kernels' in config else None,
                 layers=config.layers if 'layers' in config else None,
@@ -124,7 +124,7 @@ def make_objects(
         y_train: torch.tensor,
         y_val: torch.tensor,
         y_test: torch.tensor,
-        model_type: str,
+        architecture: str,
         batch_size: int,
         kernels: list[int],
         layers: list[int],
@@ -137,7 +137,7 @@ def make_objects(
     Rather than returning an Optimizer object, we return a function that creates an optimizer, so
     that we can easily change the learning rate during training.
     """
-    assert model_type in ['FC', 'CNN'], f"Unknown model type: {model_type}"
+    assert architecture in ['FC', 'CNN'], f"Unknown model type: {architecture}"
     assert optimizer in ['adam', 'sgd'], f"Unknown optimizer: {optimizer}"
 
     train_loader = make_loader(x_train, y_train, batch_size=batch_size)
@@ -145,16 +145,16 @@ def make_objects(
     test_loader = make_loader(x_test, y_test, batch_size=batch_size)
 
     # Make the model
-    if model_type == 'FC':
+    if architecture == 'FC':
         model = FullyConnectedNN(
             input_size=x_train.shape[1],
             hidden_layers=layers,
             output_size=10,
         )
-    elif model_type == 'CNN':
+    elif architecture == 'CNN':
         model = ConvNet2L(kernel_0=kernels[0], kernel_1=kernels[1], classes=10)
     else:
-        raise ValueError(f"Unknown model type: {model_type}")
+        raise ValueError(f"Unknown model type: {architecture}")
 
     assert device
     model = model.to(device)
@@ -178,7 +178,7 @@ def make_objects(
     )
 
 
-def train(
+def train(  # noqa: PLR0915
         model: nn.Module,
         train_loader: DataLoader,
         validation_loader: DataLoader,
