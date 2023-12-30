@@ -302,7 +302,7 @@ def evaluate(
         log_wandb: bool = True) -> None:
     """Tests the model on the test set. Logs the accuracy to the console and to wandb."""
     model.eval()
-    test_loader = make_loader(x_test, y_test, batch_size=1000)
+    test_loader = DataLoader(dataset=TensorDataset(x_test, y_test), batch_size=1000, shuffle=False)
     avg_test_loss = calculate_average_loss(
         data_loader=test_loader, model=model, loss_func=criterion, device=device,
     )
