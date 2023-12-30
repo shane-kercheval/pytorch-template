@@ -20,7 +20,7 @@ parameters:
   notes:
     value: Notes
   epochs:
-    value: 20
+    value: 40
   architecture:
     value: CNN
   num_reduce_learning_rate:

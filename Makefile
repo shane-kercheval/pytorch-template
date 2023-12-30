@@ -46,6 +46,12 @@ tests: linting
 open_coverage:
 	open 'htmlcov/index.html'
 
+
+run_config_fc_1:
+	python source/entrypoints/cli.py run \
+		--config_file source/entrypoints/run_config_fc_1.yaml
+		--device cuda
+
 run_config_cnn_1:
 	python source/entrypoints/cli.py run \
 		--config_file source/entrypoints/run_config_cnn_1.yaml

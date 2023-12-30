@@ -4,7 +4,7 @@ tags:
   - demo
 notes: First run with a simple CNN
 architecture: CNN
-epochs: 20
+epochs: 40
 kernels:
   - 16
   - 32

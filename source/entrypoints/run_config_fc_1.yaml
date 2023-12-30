@@ -4,7 +4,7 @@ tags:
   - demo
 notes: First run with a simple fully connected network
 architecture: FC
-epochs: 20
+epochs: 40
 layers:
   - 500
   - 100
