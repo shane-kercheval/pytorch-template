@@ -19,6 +19,28 @@ from source.domain.architectures import FullyConnectedNN, ConvNet2L
 from source.domain.pytorch_helpers import EarlyStopping, calculate_average_loss
 
 
+def get_data(architecture: str):  # noqa
+    """Function is required by and called from `model_pipeline()`."""
+    assert architecture in ['FC', 'CNN'], f"Architecture {architecture} not supported."
+
+    x, y = fetch_openml('mnist_784', version=1, return_X_y=True, parser='auto')
+    x = torch.tensor(x.values, dtype=torch.float32)
+    y = torch.tensor(y.astype(int).values, dtype=torch.long)
+
+    if architecture == 'CNN':
+        # Reshape data to have channel dimension
+        # MNIST images are 28x28, so we reshape them to [batch_size, 1, 28, 28]
+        x = x.reshape(-1, 1, 28, 28)
+
+    # 80% train; 10% validation; 10% test
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+    x_test, x_val, y_test, y_val = train_test_split(x_test, y_test, test_size=0.5, random_state=42)
+    logging.info(f"Training set  : X-{x_train.shape}, y-{y_train.shape}")
+    logging.info(f"Validation set: X-{x_val.shape}, y-{y_val.shape}")
+    logging.info(f"Test set      : X-{x_test.shape}, y-{y_test.shape}")
+    return x_train, x_val, x_test, y_train, y_val, y_test
+
+
 def model_pipeline(config: dict | None = None) -> nn.Module:
     """
     Builds the pipeline, data loaders, and model, and trains/tests. Results are logged to Weights
@@ -33,7 +55,6 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
             loaded from Weights and Biases (which implies a 'sweep' is running).
     """
     # Make the data
-    x_train, x_val, x_test, y_train, y_val, y_test = get_data()  # noqa
 
     # if no config is provided, a sweep is running, and we will get the config from wandb
     project = config.pop('project') if config else None
@@ -43,8 +64,8 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
         config = wandb.config
         pprint.pprint(config)
 
+        x_train, x_val, x_test, y_train, y_val, y_test = get_data(architecture=config.architecture)
         device = config.device if 'device' in config else None
-
         # make the model, data, and optimization problem
         model, train_loader, validation_loader, test_loader, criterion, optimizer_creator \
             = make_objects(
@@ -56,7 +77,8 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
                 y_test=y_test,
                 model_type=config.model_type,
                 batch_size=config.batch_size,
-                kernels=config.kernels,
+                kernels=config.kernels if 'kernels' in config else None,
+                layers=config.layers if 'layers' in config else None,
                 optimizer=config.optimizer,
                 device=device,
             )
@@ -105,6 +127,7 @@ def make_objects(
         model_type: str,
         batch_size: int,
         kernels: list[int],
+        layers: list[int],
         optimizer: str,
         device: str,
         ) -> tuple[nn.Module, DataLoader, DataLoader, DataLoader, callable, callable]:
@@ -125,11 +148,11 @@ def make_objects(
     if model_type == 'FC':
         model = FullyConnectedNN(
             input_size=x_train.shape[1],
-            hidden_layers=[8],
-            output_size=1,
+            hidden_layers=layers,
+            output_size=10,
         )
     elif model_type == 'CNN':
-        model = ConvNet2L(kernels, classes=10)
+        model = ConvNet2L(kernel_0=kernels[0], kernel_1=kernels[1], classes=10)
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
