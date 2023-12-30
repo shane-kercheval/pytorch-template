@@ -2,10 +2,10 @@
 import torch
 from torch import nn
 from source.domain.architectures import FullyConnectedNN, ConvNet2L
-from source.domain.experiment import make_objects
+from source.domain.experiment import make_objects, test, train
 
 
-def test_make_objects__fc__sgd__cpu(mnist_fc):  # noqa
+def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
     model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
         make_objects(
             *mnist_fc,
@@ -52,7 +52,7 @@ def test_make_objects__fc__sgd__cpu(mnist_fc):  # noqa
     assert optimizer.defaults['lr'] == 0.01
 
 
-def test_make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
+def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
         make_objects(
             *mnist_cnn,
@@ -99,3 +99,70 @@ def test_make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     optimizer = optimizer_creator(lr=0.01)
     assert isinstance(optimizer, torch.optim.Adam)
     assert optimizer.defaults['lr'] == 0.01
+
+
+def test__train__fc(mnist_fc):  # noqa
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
+        make_objects(
+            *mnist_fc,
+            model_type='FC',
+            batch_size=128,
+            kernels=None,
+            layers=[64],
+            optimizer='sgd',
+            device=device,
+        )
+    train(
+        model=model,
+        train_loader=train_loader,
+        validation_loader=validation_loader,
+        criterion=criterion,
+        optimizer_creator=optimizer_creator,
+        epochs=2,
+        learning_rate=0.01,
+        device=device,
+        num_reduce_learning_rate=1,
+        log_wandb=False,
+    )
+    test(
+        model=model,
+        test_loader=test_loader,
+        x_test=mnist_fc[2],
+        criterion=criterion,
+        device=device,
+        log_wandb=False,
+    )
+
+def test__train__cnn(mnist_cnn):  # noqa
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
+        make_objects(
+            *mnist_cnn,
+            model_type='CNN',
+            batch_size=128,
+            kernels=[8, 16],
+            layers=None,
+            optimizer='adam',
+            device=device,
+        )
+    train(
+        model=model,
+        train_loader=train_loader,
+        validation_loader=validation_loader,
+        criterion=criterion,
+        optimizer_creator=optimizer_creator,
+        epochs=2,
+        learning_rate=0.01,
+        device=device,
+        num_reduce_learning_rate=1,
+        log_wandb=False,
+    )
+    test(
+        model=model,
+        test_loader=test_loader,
+        x_test=mnist_cnn[2],
+        criterion=criterion,
+        device=device,
+        log_wandb=False,
+    )

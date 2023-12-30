@@ -12,7 +12,7 @@ from source.domain.experiment import get_data
 logging.config.fileConfig(
     os.path.join(os.getcwd(), 'source/config/logging_to_file.conf'),
     defaults={'logfilename': os.path.join(os.getcwd(), 'tests/test_files/log.log')},
-    disable_existing_loggers=False
+    disable_existing_loggers=False,
 )
 
 

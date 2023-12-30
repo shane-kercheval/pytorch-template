@@ -6,7 +6,7 @@ import pprint
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
-import tqdm
+from tqdm.auto import tqdm
 import wandb
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -188,6 +188,7 @@ def train(
         learning_rate: float,
         device: str,
         num_reduce_learning_rate: int,
+        log_wandb: bool = True,
         ) -> None:
     """
     Trains the model for the number of epochs specified in the config. Uses early stopping to
@@ -200,9 +201,11 @@ def train(
         learning rate. If the number of times the learning rate has been reduced equals
         num_reduce_learning_rate, training stops.
     """
+    logging.info(f"Training on {device}; epochs: {epochs}; learning rate: {learning_rate}")
     model.train()
-    # Tell wandb to watch what the model gets up to: gradients, weights, and more!
-    wandb.watch(model, criterion, log='all', log_freq=20)
+    if log_wandb:
+        # Tell wandb to watch what the model gets up to: gradients, weights, and more!
+        wandb.watch(model, criterion, log='all', log_freq=20)
 
     # Run training and track with wandb
     example_ct = 0  # number of examples seen
@@ -219,7 +222,8 @@ def train(
     )
     stop_count = 0
     optimizer = optimizer_creator(lr=learning_rate)
-    wandb.log({'learning_rate': learning_rate})  # only log initial learning rate
+    if log_wandb:
+        wandb.log({'learning_rate': learning_rate})  # only log initial learning rate
     for epoch in tqdm(range(epochs)):
         logging.info(f"Epoch: {epoch} | Learning Rate: {learning_rate:.3f}")
         running_training_loss = 0
@@ -247,15 +251,16 @@ def train(
                 average_validation_loss = calculate_average_loss(
                     data_loader=validation_loader, model=model, loss_func=criterion, device=device,
                 )
-                wandb.log(
-                    {
-                        'epoch': epoch,
-                        'step_learning_rate': learning_rate,
-                        'step_training_loss': avg_training_loss,
-                        'step_validation_loss': average_validation_loss,
-                    },
-                    step=example_ct,
-                )
+                if log_wandb:
+                    wandb.log(
+                        {
+                            'epoch': epoch,
+                            'step_learning_rate': learning_rate,
+                            'step_training_loss': avg_training_loss,
+                            'step_validation_loss': average_validation_loss,
+                        },
+                        step=example_ct,
+                    )
                 logging.info(
                     f"Epoch: {epoch} | Learning Rate: {learning_rate:.3f}: "
                     f"Avg Training/Validation Loss after {example_ct:,} examples: "
@@ -265,7 +270,7 @@ def train(
 
         model.eval()
         average_validation_loss = calculate_average_loss(
-            data_loader=validation_loader, model=model, loss_func=criterion,
+            data_loader=validation_loader, model=model, loss_func=criterion, device=device,
         )
         model.train()
         if early_stopping(average_validation_loss):
@@ -283,10 +288,11 @@ def train(
             else:
                 break
 
-    wandb.log({
-        'best_validation_loss': early_stopping.lowest_loss,
-        'best_epoch': early_stopping.best_index,
-    })
+    if log_wandb:
+        wandb.log({
+            'best_validation_loss': early_stopping.lowest_loss,
+            'best_epoch': early_stopping.best_index,
+        })
     logging.info(f"Best validation loss: {early_stopping.lowest_loss:.3f}")
     logging.info(f"Best early stopping index/epoch: {early_stopping.best_index}")
 
@@ -296,12 +302,16 @@ def test(
         test_loader: DataLoader,
         x_test: torch.tensor,
         criterion: callable,
-        device: str) -> None:
+        device: str,
+        log_wandb: bool = True) -> None:
     """Tests the model on the test set. Logs the accuracy to the console and to wandb."""
     model.eval()
-    avg_test_loss = calculate_average_loss(data_loader=test_loader, model=model, loss_func=criterion)  # noqa
+    avg_test_loss = calculate_average_loss(
+        data_loader=test_loader, model=model, loss_func=criterion, device=device,
+    )
     logging.info(f"Average Loss on test set: {avg_test_loss:.3f}")
-    wandb.log({'test_loss': avg_test_loss})
+    if log_wandb:
+        wandb.log({'test_loss': avg_test_loss})
 
     # Log confusion matrix
     with torch.no_grad():
@@ -316,16 +326,17 @@ def test(
 
     all_predictions = np.array(all_predictions)
     all_labels = np.array(all_labels)
-    plot_misclassified_sample(num_images=30, images=x_test, predictions=all_predictions, labels=all_labels)  # noqa
-    plot_heatmap(predictions=all_predictions, labels=all_labels)
+    plot_misclassified_sample(num_images=30, images=x_test, predictions=all_predictions, labels=all_labels, log_wandb=log_wandb)  # noqa
+    plot_heatmap(predictions=all_predictions, labels=all_labels, log_wandb=log_wandb)
 
     # for each class, calculate the accuracy metrics
     precision, recall, f1, _ = precision_recall_fscore_support(y_true=all_labels, y_pred=all_predictions)  # noqa
-    score_table = wandb.Table(columns=["class", "precision", "recall", "f1"])
-    for i in range(10):
-        score_table.add_data(str(i), precision[i], recall[i], f1[i])
-    wandb.log({"score_table": score_table})
-    plot_scores(precision, recall, f1)
+    plot_scores(precision, recall, f1, log_wandb=log_wandb)
+    if log_wandb:
+        score_table = wandb.Table(columns=["class", "precision", "recall", "f1"])
+        for i in range(10):
+            score_table.add_data(str(i), precision[i], recall[i], f1[i])
+        wandb.log({"score_table": score_table})
 
     precision, recall, f1, _ = precision_recall_fscore_support(
         y_true=all_labels,
@@ -333,7 +344,8 @@ def test(
         average='weighted',
     )
     logging.info(f"Weighted Precision: {precision:.3f}, Recall: {recall:.3f}, F1: {f1:.3f}")
-    wandb.log({'weighted_precision': precision, 'weighted_recall': recall, 'weighted_f1': f1})
+    if log_wandb:
+        wandb.log({'weighted_precision': precision, 'weighted_recall': recall, 'weighted_f1': f1})
 
 
 
@@ -341,7 +353,8 @@ def plot_misclassified_sample(
         num_images: int,
         images: torch.tensor,
         predictions: np.array,
-        labels: np.array) -> None:
+        labels: np.array,
+        log_wandb: bool) -> None:
     """Plot a sample of the misclassified images."""
     fig, ax = plt.subplots(nrows=num_images // 5, ncols=5, sharex=True, sharey=True)
     ax = ax.flatten()
@@ -356,10 +369,13 @@ def plot_misclassified_sample(
     ax[0].set_xticks([])
     ax[0].set_yticks([])
     plt.tight_layout()
-    wandb.log({'sample-misclassified': wandb.Image(fig)})
+    if log_wandb:
+        wandb.log({'sample-misclassified': wandb.Image(fig)})
+        return None
+    return fig
 
 
-def plot_heatmap(predictions: np.array, labels: np.array) -> None:
+def plot_heatmap(predictions: np.array, labels: np.array, log_wandb: bool) -> None:
     """Plot a heatmap of the misclassified samples."""
     # create a heatmap of misclassified samples
     cm = confusion_matrix(labels, predictions)
@@ -370,10 +386,13 @@ def plot_heatmap(predictions: np.array, labels: np.array) -> None:
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
     plt.title('Count of Misclassified Samples by Class')
-    wandb.log({'count-misclassified': wandb.Image(fig)})
+    if log_wandb:
+        wandb.log({'count-misclassified': wandb.Image(fig)})
+        return None
+    return fig
 
 
-def plot_scores(precision: list, recall: list, f1: list) -> None:
+def plot_scores(precision: list, recall: list, f1: list, log_wandb: bool) -> None:
     """Plot the precision, recall, and f1 scores for each class."""
     # create a bar plot
     x = range(10)
@@ -394,4 +413,7 @@ def plot_scores(precision: list, recall: list, f1: list) -> None:
     ymin = min(*precision, *recall, *f1)
     ymax = max(*precision, *recall, *f1)
     ax.set_ylim([ymin - 0.03, min(ymax + 0.03, 1)])
-    wandb.log({'scores': wandb.Image(fig)})
+    if log_wandb:
+        wandb.log({'scores': wandb.Image(fig)})
+        return None
+    return fig
