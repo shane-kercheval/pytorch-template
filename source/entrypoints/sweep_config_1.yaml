@@ -1,3 +1,4 @@
+project: pytorch-demo
 method: grid
 # method: random
 # method: bayes
@@ -10,8 +11,8 @@ parameters:
   ####
   # configuration parameters (fixed; via `value`)
   ####
-  project:
-    value: project_name
+  # project:
+  #   value: project_name
   tags:
     value:
       - pytorch
