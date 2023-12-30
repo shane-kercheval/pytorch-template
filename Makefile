@@ -32,9 +32,9 @@ docker_all:
 # Project
 ####
 linting:
-	flake8 --max-line-length 99 source/domain
-	flake8 --max-line-length 99 source/entrypoints
-	flake8 --max-line-length 99 tests
+	ruff source/domain
+	ruff source/entrypoints
+	ruff tests
 
 tests: linting
 	rm -f tests/test_files/log.log
