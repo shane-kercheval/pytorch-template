@@ -66,14 +66,12 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
         x_train, x_val, x_test, y_train, y_val, y_test = get_data(architecture=config.architecture)
         device = config.device if 'device' in config else None
         # make the model, data, and optimization problem
-        model, train_loader, validation_loader, test_loader, criterion, optimizer_creator \
+        model, train_loader, validation_loader, criterion, optimizer_creator \
             = make_objects(
                 x_train=x_train,
                 x_val=x_val,
-                x_test=x_test,
                 y_train=y_train,
                 y_val=y_val,
-                y_test=y_test,
                 architecture=config.architecture,
                 batch_size=config.batch_size,
                 kernels=config.kernels if 'kernels' in config else None,
@@ -95,16 +93,15 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
             num_reduce_learning_rate=config.num_reduce_learning_rate,
         )
         # and test its final performance
-        test(
+        evaluate(
             model=model,
-            test_loader=test_loader,
             x_test=x_test,
+            y_test=y_test,
             criterion=criterion,
             device=device,
         )
         # Save the model in the exchangeable ONNX format
-        x, _ = next(iter(test_loader))
-        torch.onnx.export(model, x.to(device) , 'model.onnx')
+        torch.onnx.export(model, x_test.to(device) , 'model.onnx')
         wandb.save('model.onnx')
     return model
 
@@ -123,17 +120,15 @@ def make_loader(x: torch.tensor, y: torch.tensor, batch_size: int) -> DataLoader
 def make_objects(
         x_train: torch.tensor,
         x_val: torch.tensor,
-        x_test: torch.tensor,
         y_train: torch.tensor,
         y_val: torch.tensor,
-        y_test: torch.tensor,
         architecture: str,
         batch_size: int,
         kernels: list[int],
         layers: list[int],
         optimizer: str,
         device: str,
-        ) -> tuple[nn.Module, DataLoader, DataLoader, DataLoader, callable, callable]:
+        ) -> tuple[nn.Module, DataLoader, DataLoader, callable, callable]:
     """
     Make the model, data loaders, optimization objects, etc.
 
@@ -145,7 +140,6 @@ def make_objects(
 
     train_loader = make_loader(x_train, y_train, batch_size=batch_size)
     validation_loader = make_loader(x_val, y_val, batch_size=batch_size)
-    test_loader = make_loader(x_test, y_test, batch_size=batch_size)
 
     # Make the model
     if architecture == 'FC':
@@ -175,7 +169,6 @@ def make_objects(
         model,
         train_loader,
         validation_loader,
-        test_loader,
         criterion,
         optimizer_creator,
     )
@@ -300,15 +293,16 @@ def train(  # noqa: PLR0915
     logging.info(f"Best early stopping index/epoch: {early_stopping.best_index}")
 
 
-def test(
+def evaluate(
         model: nn.Module,
-        test_loader: DataLoader,
         x_test: torch.tensor,
+        y_test: torch.tensor,
         criterion: callable,
         device: str,
         log_wandb: bool = True) -> None:
     """Tests the model on the test set. Logs the accuracy to the console and to wandb."""
     model.eval()
+    test_loader = make_loader(x_test, y_test, batch_size=1000)
     avg_test_loss = calculate_average_loss(
         data_loader=test_loader, model=model, loss_func=criterion, device=device,
     )
@@ -318,22 +312,22 @@ def test(
 
     # Log confusion matrix
     with torch.no_grad():
-        all_predictions = []
-        all_labels = []
+        test_predictions = []
+        test_labels = []
         for x, y in test_loader:
             x, y = x.to(device), y.cpu().numpy()  # noqa: PLW2901
             outputs = model(x)
             predictions = torch.argmax(outputs.data, dim=1).cpu().numpy()
-            all_predictions.extend(predictions)
-            all_labels.extend(y)
+            test_predictions.extend(predictions)
+            test_labels.extend(y)
 
-    all_predictions = np.array(all_predictions)
-    all_labels = np.array(all_labels)
-    plot_misclassified_sample(num_images=30, images=x_test, predictions=all_predictions, labels=all_labels, log_wandb=log_wandb)  # noqa
-    plot_heatmap(predictions=all_predictions, labels=all_labels, log_wandb=log_wandb)
+    test_predictions = np.array(test_predictions)
+    test_labels = np.array(test_labels)
+    plot_misclassified_sample(num_images=30, images=x_test, predictions=test_predictions, labels=test_labels, log_wandb=log_wandb)  # noqa
+    plot_heatmap(predictions=test_predictions, labels=test_labels, log_wandb=log_wandb)
 
     # for each class, calculate the accuracy metrics
-    precision, recall, f1, _ = precision_recall_fscore_support(y_true=all_labels, y_pred=all_predictions)  # noqa
+    precision, recall, f1, _ = precision_recall_fscore_support(y_true=test_labels, y_pred=test_predictions)  # noqa
     plot_scores(precision, recall, f1, log_wandb=log_wandb)
     if log_wandb:
         score_table = wandb.Table(columns=["class", "precision", "recall", "f1"])
@@ -342,14 +336,13 @@ def test(
         wandb.log({"score_table": score_table})
 
     precision, recall, f1, _ = precision_recall_fscore_support(
-        y_true=all_labels,
-        y_pred=all_predictions,
+        y_true=test_labels,
+        y_pred=test_predictions,
         average='weighted',
     )
     logging.info(f"Weighted Precision: {precision:.3f}, Recall: {recall:.3f}, F1: {f1:.3f}")
     if log_wandb:
         wandb.log({'weighted_precision': precision, 'weighted_recall': recall, 'weighted_f1': f1})
-
 
 
 def plot_misclassified_sample(

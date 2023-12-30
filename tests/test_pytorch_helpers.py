@@ -3,7 +3,8 @@
 import numpy as np
 from torch import nn
 from torch import optim
-from source.domain.pytorch_helpers import FullyConnectedNN, PyTorchTrainer
+from source.domain.pytorch_helpers import PyTorchTrainer
+from source.domain.architectures import FullyConnectedNN
 
 
 def assert_states_are_same(state_a: dict, state_b: dict) -> None:  # noqa: D103

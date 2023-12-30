@@ -2,13 +2,17 @@
 import torch
 from torch import nn
 from source.domain.architectures import FullyConnectedNN, ConvNet2L
-from source.domain.experiment import make_objects, test, train
+from source.domain.experiment import make_objects, train, evaluate
 
 
 def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
-    model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
+    x_train, x_val, _, y_train, y_val, _ = mnist_fc
+    model, train_loader, validation_loader, criterion, optimizer_creator = \
         make_objects(
-            *mnist_fc,
+            x_train=x_train,
+            x_val=x_val,
+            y_train=y_train,
+            y_val=y_val,
             architecture='FC',
             batch_size=55,
             kernels=None,
@@ -39,9 +43,6 @@ def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
     x_batch, y_batch = next(iter(validation_loader))
     assert list(x_batch.size()) == [55, 784]
     assert len(y_batch) == 55
-    x_batch, y_batch = next(iter(test_loader))
-    assert list(x_batch.size()) == [55, 784]
-    assert len(y_batch) == 55
 
     # test criterion
     assert isinstance(criterion, nn.CrossEntropyLoss)
@@ -53,9 +54,13 @@ def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
 
 
 def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
-    model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
+    x_train, x_val, _, y_train, y_val, _ = mnist_cnn
+    model, train_loader, validation_loader, criterion, optimizer_creator = \
         make_objects(
-            *mnist_cnn,
+            x_train=x_train,
+            x_val=x_val,
+            y_train=y_train,
+            y_val=y_val,
             architecture='CNN',
             batch_size=55,
             kernels=[8, 16],
@@ -88,9 +93,6 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     x_batch, y_batch = next(iter(validation_loader))
     assert list(x_batch.size()) == [55, 1, 28, 28]
     assert len(y_batch) == 55
-    x_batch, y_batch = next(iter(test_loader))
-    assert list(x_batch.size()) == [55, 1, 28, 28]
-    assert len(y_batch) == 55
 
     # test criterion
     assert isinstance(criterion, nn.CrossEntropyLoss)
@@ -103,9 +105,13 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
 
 def test__train__fc(mnist_fc):  # noqa
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
+    x_train, x_val, x_test, y_train, y_val, y_test = mnist_fc
+    model, train_loader, validation_loader, criterion, optimizer_creator = \
         make_objects(
-            *mnist_fc,
+            x_train=x_train,
+            x_val=x_val,
+            y_train=y_train,
+            y_val=y_val,
             architecture='FC',
             batch_size=128,
             kernels=None,
@@ -125,10 +131,10 @@ def test__train__fc(mnist_fc):  # noqa
         num_reduce_learning_rate=1,
         log_wandb=False,
     )
-    test(
+    evaluate(
         model=model,
-        test_loader=test_loader,
-        x_test=mnist_fc[2],
+        x_test=x_test,
+        y_test=y_test,
         criterion=criterion,
         device=device,
         log_wandb=False,
@@ -136,9 +142,13 @@ def test__train__fc(mnist_fc):  # noqa
 
 def test__train__cnn(mnist_cnn):  # noqa
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model, train_loader, validation_loader, test_loader, criterion, optimizer_creator = \
+    x_train, x_val, x_test, y_train, y_val, y_test = mnist_cnn
+    model, train_loader, validation_loader, criterion, optimizer_creator = \
         make_objects(
-            *mnist_cnn,
+            x_train=x_train,
+            x_val=x_val,
+            y_train=y_train,
+            y_val=y_val,
             architecture='CNN',
             batch_size=128,
             kernels=[8, 16],
@@ -158,10 +168,10 @@ def test__train__cnn(mnist_cnn):  # noqa
         num_reduce_learning_rate=1,
         log_wandb=False,
     )
-    test(
+    evaluate(
         model=model,
-        test_loader=test_loader,
-        x_test=mnist_cnn[2],
+        x_test=x_test,
+        y_test=y_test,
         criterion=criterion,
         device=device,
         log_wandb=False,
