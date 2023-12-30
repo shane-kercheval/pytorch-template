@@ -47,15 +47,27 @@ open_coverage:
 	open 'htmlcov/index.html'
 
 
-run_config_fc_1:
+run_fc_1:
 	python source/entrypoints/cli.py run \
-		--config_file source/entrypoints/run_config_fc_1.yaml
-		--device cuda
+		-config_file=source/entrypoints/run_fc_1.yaml \
+		-device=cuda
 
-run_config_cnn_1:
+run_cnn_1:
 	python source/entrypoints/cli.py run \
-		--config_file source/entrypoints/run_config_cnn_1.yaml
-		--device cuda
+		-config_file=source/entrypoints/run_cnn_1.yaml \
+		-device=cuda
+
+sweep_fc_1_bayes:
+	python source/entrypoints/cli.py sweep \
+		-config_file=source/entrypoints/sweep_fc_1_bayes.yaml \
+		-device=cpu \
+		-count=70
+
+sweep_cnn_2_bayes:
+	python source/entrypoints/cli.py sweep \
+		-config_file=source/entrypoints/sweep_cnn_2_bayes.yaml \
+		-device=cuda \
+		-count=70
 
 pytorch_fully:
 	jupyter nbconvert --execute --to html source/notebooks/pytorch_fully_connected.ipynb

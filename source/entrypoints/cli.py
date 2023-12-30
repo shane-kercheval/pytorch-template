@@ -28,8 +28,8 @@ def main() -> None:
 
 
 @main.command()
-@click.option('--config_file', '-c', type=str)
-@click.option('--device', type=str, default=None)
+@click.option('-config_file', '-c', type=str)
+@click.option('-device', type=str, default=None)
 def run(config_file: str, device: str | None = None) -> None:
     """Execute a single 'run' on Weights and Biases."""
     with open(config_file) as f:
@@ -44,15 +44,13 @@ def run(config_file: str, device: str | None = None) -> None:
 
 
 @main.command()
-@click.option('--config_file', '-c', type=str)
-@click.option('--device', type=str, default=None)
-@click.option('--count', type=int, default=None)
-@click.option('--sweep_id', type=str, default=None)
+@click.option('-config_file', type=str)
+@click.option('-device', type=str, default=None)
+@click.option('-count', type=int, default=None)
 def sweep(
         config_file: str,
         device: str | None = None,
-        count: int | None = None,
-        sweep_id: str | None = None) -> None:
+        count: int | None = None) -> None:
     """
     Execute a 'sweep' (of multiple runs) on Weights and Biases.
 
@@ -64,9 +62,6 @@ def sweep(
         count:
             Number of runs to execute. If None, will execute all runs. Ignored if
             config['method'] == 'grid'.
-        sweep_id:
-            ID of the sweep to execute. If provided, this function assumes a sweep is already
-            running with the provided ID. If None, will create a new sweep.
     """
     with open(config_file) as f:
         config = yaml.safe_load(f)
@@ -78,9 +73,7 @@ def sweep(
     logging.info(f"Device: {device}")
     config['parameters']['device'] = {'value': device}
 
-    if sweep_id is None:
-        # start a new sweep if one is not already running (i.e. sweep_id is None)
-        sweep_id = wandb.sweep(config)
+    sweep_id = wandb.sweep(config)
     count = None if config['method'] == 'grid' else count
     logging.info(f"Run count: {count}")
     wandb.agent(sweep_id, model_pipeline, count=count)

@@ -1,4 +1,4 @@
-project: pytorch-demo
+project: pytorch-demo-v2
 # method: grid
 # method: random
 method: bayes
