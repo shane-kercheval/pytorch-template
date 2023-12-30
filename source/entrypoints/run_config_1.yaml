@@ -1,0 +1,14 @@
+project: pytorch-demo
+tags:
+  - pytorch
+  - demo
+notes: First run with a simple CNN
+epochs: 20
+classes: 10
+kernels:
+  - 16
+  - 32
+batch_size: 64
+optimizer: Adam
+learning_rate: 0.01
+architecture: CNN
