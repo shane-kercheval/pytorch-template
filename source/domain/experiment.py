@@ -289,7 +289,7 @@ def train(  # noqa: PLR0915
         # e.g. we may have stopped training because we are at the limit of the number of epochs,
         # but either A) the validation loss is still decreasing, or B) the early stopping counter
         # has not yet reached the patience limit
-        logging.info("Training completed without early stopping.")
+        logging.info("Training completed without early stopping. Loading previous best state.")
         model.load_state_dict(early_stopping.best_state)
 
     if log_wandb:
@@ -363,14 +363,22 @@ def evaluate(
             score_table.add_data(str(i), precision[i], recall[i], f1[i])
         wandb.log({"score_table": score_table})
 
+    # compute scores for the entire dataset based on the test data
     precision, recall, f1, _ = precision_recall_fscore_support(
         y_true=test_labels,
         y_pred=test_predictions,
         average='weighted',
     )
+    accuracy = np.mean(test_predictions == test_labels)
     logging.info(f"Weighted Precision: {precision:.3f}, Recall: {recall:.3f}, F1: {f1:.3f}")
+    logging.info(f"Accuracy: {accuracy:.3f}")
     if log_wandb:
-        wandb.log({'weighted_precision': precision, 'weighted_recall': recall, 'weighted_f1': f1})
+        wandb.log({
+            'weighted_precision': precision,
+            'weighted_recall': recall,
+            'weighted_f1': f1,
+            'accuracy': accuracy,
+        })
 
 
 def plot_misclassified_sample(
