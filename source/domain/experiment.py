@@ -304,7 +304,7 @@ def train(  # noqa: PLR0915
     logging.info(f"Best early stopping index/epoch: {early_stopping.best_index}")
 
 
-def predict(model: nn.Module, x: torch.tensor, device: str) -> torch.tensor:
+def predict(model: nn.Module, x: torch.tensor, device: str, probs: bool = False) -> torch.tensor:
     """
     Predict the class for a given input. Returns a tensor of predictions. To convert to a numpy
     array, use `predict(model, x, device).cpu().numpy()`.
@@ -313,6 +313,8 @@ def predict(model: nn.Module, x: torch.tensor, device: str) -> torch.tensor:
     with torch.no_grad():
         x = x.to(device)
         outputs = model(x)
+        if probs:
+            return torch.softmax(outputs.data, dim=1)
         return torch.argmax(outputs.data, dim=1)
 
 

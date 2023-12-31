@@ -134,7 +134,6 @@ def calculate_average_loss(
     return running_loss / total_samples
 
 
-
 class PyTorchTrainer:
     """Base class that wraps pytorch training, early stopping logic."""
 
