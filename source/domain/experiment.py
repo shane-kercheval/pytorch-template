@@ -65,22 +65,17 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
         pprint.pprint(config)
         x_train, x_val, x_test, y_train, y_val, y_test = get_data(architecture=config.architecture)
         device = config.device if 'device' in config else None
-        # make the model, data, and optimization problem
-        model, train_loader, validation_loader, criterion, optimizer_creator \
-            = make_objects(
-                x_train=x_train,
-                x_val=x_val,
-                y_train=y_train,
-                y_val=y_val,
-                architecture=config.architecture,
-                batch_size=config.batch_size,
-                kernels=config.kernels if 'kernels' in config else None,
-                layers=config.layers if 'layers' in config else None,
-                optimizer=config.optimizer,
-                device=device,
-            )
-        print(model)
-        # and use them to train the model
+        train_loader = make_loader(x_train, y_train, batch_size=config.batch_size)
+        validation_loader = make_loader(x_val, y_val, batch_size=config.batch_size)
+        model = make_model(
+            architecture=config.architecture,
+            input_size=x_train.shape[1],
+            layers=config.layers if 'layers' in config else None,
+            kernels=config.kernels if 'kernels' in config else None,
+            device=device,
+        )
+        criterion = nn.CrossEntropyLoss()
+        optimizer_creator = make_optimizer(optimizer=config.optimizer, model=model)
         train(
             model=model,
             train_loader=train_loader,
@@ -92,7 +87,6 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
             device=device,
             num_reduce_learning_rate=config.num_reduce_learning_rate,
         )
-        # and test its final performance
         evaluate(
             model=model,
             train_loader=train_loader,
@@ -116,34 +110,18 @@ def make_loader(x: torch.tensor, y: torch.tensor, batch_size: int) -> DataLoader
     )
 
 
-def make_objects(
-        x_train: torch.tensor,
-        x_val: torch.tensor,
-        y_train: torch.tensor,
-        y_val: torch.tensor,
+def make_model(
         architecture: str,
-        batch_size: int,
-        kernels: list[int],
+        input_size: int,
         layers: list[int],
-        optimizer: str,
-        device: str,
-        ) -> tuple[nn.Module, DataLoader, DataLoader, callable, callable]:
-    """
-    Make the model, data loaders, optimization objects, etc.
-
-    Rather than returning an Optimizer object, we return a function that creates an optimizer, so
-    that we can easily change the learning rate during training.
-    """
+        kernels: list[int],
+        device: str) -> nn.Module:
+    """Make a model based on the architecture."""
     assert architecture in ['FC', 'CNN'], f"Unknown model type: {architecture}"
-    assert optimizer in ['adam', 'sgd'], f"Unknown optimizer: {optimizer}"
-
-    train_loader = make_loader(x_train, y_train, batch_size=batch_size)
-    validation_loader = make_loader(x_val, y_val, batch_size=batch_size)
-
-    # Make the model
+    assert device
     if architecture == 'FC':
         model = FullyConnectedNN(
-            input_size=x_train.shape[1],
+            input_size=input_size,
             hidden_layers=layers,
             output_size=10,
         )
@@ -151,26 +129,22 @@ def make_objects(
         model = ConvNet2L(kernel_0=kernels[0], kernel_1=kernels[1], classes=10)
     else:
         raise ValueError(f"Unknown model type: {architecture}")
-
-    assert device
     model = model.to(device)
+    print(model)
+    return model
 
-    criterion = nn.CrossEntropyLoss()
 
+def make_optimizer(optimizer: str, model: nn.Module) -> callable:
+    """
+    Make an optimizer based on the optimizer name. A function is returned that creates the
+    optimizer, so that we can easily change the learning rate during training.
+    """
+    assert optimizer in ['adam', 'sgd'], f"Unknown optimizer: {optimizer}"
     if optimizer == 'adam':
-        optimizer_creator = lambda lr: torch.optim.Adam(model.parameters(), lr=lr)  # noqa: E731
-    elif optimizer == 'sgd':
-        optimizer_creator = lambda lr: torch.optim.SGD(model.parameters(), lr=lr)  # noqa: E731
-    else:
-        raise ValueError(f"Unknown optimizer: {optimizer}")
-
-    return (
-        model,
-        train_loader,
-        validation_loader,
-        criterion,
-        optimizer_creator,
-    )
+        return lambda lr: torch.optim.Adam(model.parameters(), lr=lr)
+    if optimizer == 'sgd':
+        return lambda lr: torch.optim.SGD(model.parameters(), lr=lr)
+    raise ValueError(f"Unknown optimizer: {optimizer}")
 
 
 def train(  # noqa: PLR0915
