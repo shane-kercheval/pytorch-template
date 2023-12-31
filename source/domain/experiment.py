@@ -95,7 +95,7 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
         # and test its final performance
         evaluate(
             model=model,
-            training_loader=train_loader,
+            train_loader=train_loader,
             validation_loader=validation_loader,
             x_test=x_test,
             y_test=y_test,
@@ -304,9 +304,21 @@ def train(  # noqa: PLR0915
     logging.info(f"Best early stopping index/epoch: {early_stopping.best_index}")
 
 
+def predict(model: nn.Module, x: torch.tensor, device: str) -> torch.tensor:
+    """
+    Predict the class for a given input. Returns a tensor of predictions. To convert to a numpy
+    array, use `predict(model, x, device).cpu().numpy()`.
+    """
+    model.eval()
+    with torch.no_grad():
+        x = x.to(device)
+        outputs = model(x)
+        return torch.argmax(outputs.data, dim=1)
+
+
 def evaluate(
         model: nn.Module,
-        training_loader: DataLoader,
+        train_loader: DataLoader,
         validation_loader: DataLoader,
         x_test: torch.tensor,
         y_test: torch.tensor,
@@ -316,7 +328,7 @@ def evaluate(
     """Tests the model on the test set. Logs the accuracy to the console and to wandb."""
     model.eval()
     avg_training_loss = calculate_average_loss(
-        data_loader=training_loader, model=model, loss_func=criterion, device=device,
+        data_loader=train_loader, model=model, loss_func=criterion, device=device,
     )
     logging.info(f"Final Average Loss on training set: {avg_training_loss:.3f}")
 
@@ -325,9 +337,15 @@ def evaluate(
     )
     logging.info(f"Final Average Loss on validation set: {avg_validation_loss:.3f}")
 
-    test_loader = DataLoader(dataset=TensorDataset(x_test, y_test), batch_size=1000, shuffle=False)
     avg_test_loss = calculate_average_loss(
-        data_loader=test_loader, model=model, loss_func=criterion, device=device,
+        data_loader=DataLoader(
+            dataset=TensorDataset(x_test, y_test),
+            batch_size=1000,
+            shuffle=False,
+        ),
+        model=model,
+        loss_func=criterion,
+        device=device,
     )
     logging.info(f"Final Average Loss on test set: {avg_test_loss:.3f}")
 
@@ -338,19 +356,8 @@ def evaluate(
             'test_loss': avg_test_loss,
         })
 
-    # Log confusion matrix
-    with torch.no_grad():
-        test_predictions = []
-        test_labels = []
-        for x, y in test_loader:
-            x, y = x.to(device), y.cpu().numpy()  # noqa: PLW2901
-            outputs = model(x)
-            predictions = torch.argmax(outputs.data, dim=1).cpu().numpy()
-            test_predictions.extend(predictions)
-            test_labels.extend(y)
-
-    test_predictions = np.array(test_predictions)
-    test_labels = np.array(test_labels)
+    test_predictions = predict(model=model, x=x_test, device=device).cpu().numpy()
+    test_labels = y_test.cpu().numpy()
     plot_misclassified_sample(num_images=30, images=x_test, predictions=test_predictions, labels=test_labels, log_wandb=log_wandb)  # noqa
     plot_heatmap(predictions=test_predictions, labels=test_labels, log_wandb=log_wandb)
 
