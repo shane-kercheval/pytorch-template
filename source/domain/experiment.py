@@ -95,14 +95,13 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
         # and test its final performance
         evaluate(
             model=model,
+            training_loader=train_loader,
+            validation_loader=validation_loader,
             x_test=x_test,
             y_test=y_test,
             criterion=criterion,
             device=device,
         )
-        # Save the model in the exchangeable ONNX format
-        torch.onnx.export(model, x_test.to(device) , 'model.onnx')
-        wandb.save('model.onnx')
     return model
 
 
@@ -284,17 +283,31 @@ def train(  # noqa: PLR0915
             else:
                 break
 
+    if not early_stopping.is_stopped:
+        # we have finished training, but early stopping was not triggered, so we need to load the
+        # best state, which may or may not be the current state
+        # e.g. we may have stopped training because we are at the limit of the number of epochs,
+        # but either A) the validation loss is still decreasing, or B) the early stopping counter
+        # has not yet reached the patience limit
+        logging.info("Training completed without early stopping.")
+        model.load_state_dict(early_stopping.best_state)
+
     if log_wandb:
         wandb.log({
             'best_validation_loss': early_stopping.lowest_loss,
             'best_epoch': early_stopping.best_index,
         })
+        # Save the model in the exchangeable ONNX format
+        torch.onnx.export(model, x_batch.to(device) , 'model.onnx')
+        wandb.save('model.onnx')
     logging.info(f"Best validation loss: {early_stopping.lowest_loss:.3f}")
     logging.info(f"Best early stopping index/epoch: {early_stopping.best_index}")
 
 
 def evaluate(
         model: nn.Module,
+        training_loader: DataLoader,
+        validation_loader: DataLoader,
         x_test: torch.tensor,
         y_test: torch.tensor,
         criterion: callable,
@@ -302,13 +315,28 @@ def evaluate(
         log_wandb: bool = True) -> None:
     """Tests the model on the test set. Logs the accuracy to the console and to wandb."""
     model.eval()
+    avg_training_loss = calculate_average_loss(
+        data_loader=training_loader, model=model, loss_func=criterion, device=device,
+    )
+    logging.info(f"Final Average Loss on training set: {avg_training_loss:.3f}")
+
+    avg_validation_loss = calculate_average_loss(
+        data_loader=validation_loader, model=model, loss_func=criterion, device=device,
+    )
+    logging.info(f"Final Average Loss on validation set: {avg_validation_loss:.3f}")
+
     test_loader = DataLoader(dataset=TensorDataset(x_test, y_test), batch_size=1000, shuffle=False)
     avg_test_loss = calculate_average_loss(
         data_loader=test_loader, model=model, loss_func=criterion, device=device,
     )
-    logging.info(f"Average Loss on test set: {avg_test_loss:.3f}")
+    logging.info(f"Final Average Loss on test set: {avg_test_loss:.3f}")
+
     if log_wandb:
-        wandb.log({'test_loss': avg_test_loss})
+        wandb.log({
+            'training_loss': avg_training_loss,
+            'validation_loss': avg_validation_loss,
+            'test_loss': avg_test_loss,
+        })
 
     # Log confusion matrix
     with torch.no_grad():

@@ -133,6 +133,8 @@ def test__train__fc(mnist_fc):  # noqa
     )
     evaluate(
         model=model,
+        training_loader=train_loader,
+        validation_loader=validation_loader,
         x_test=x_test,
         y_test=y_test,
         criterion=criterion,
@@ -170,6 +172,8 @@ def test__train__cnn(mnist_cnn):  # noqa
     )
     evaluate(
         model=model,
+        training_loader=train_loader,
+        validation_loader=validation_loader,
         x_test=x_test,
         y_test=y_test,
         criterion=criterion,
