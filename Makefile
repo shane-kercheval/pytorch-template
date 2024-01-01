@@ -69,6 +69,12 @@ sweep_cnn_2_bayes:
 		-device=cuda \
 		-count=70
 
+sweep_cnn_3:
+	python source/entrypoints/cli.py sweep \
+		-config_file=source/entrypoints/sweep_cnn_3.yaml \
+		-device=cuda \
+		-count=90
+
 pytorch_fully:
 	jupyter nbconvert --execute --to html source/notebooks/pytorch_fully_connected.ipynb
 	mv source/notebooks/pytorch_fully_connected.html output/pytorch_fully_connected.html

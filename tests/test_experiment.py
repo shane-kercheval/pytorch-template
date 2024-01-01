@@ -12,9 +12,10 @@ def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
     validation_loader = make_loader(x_val, y_val, batch_size=55)
     model = make_model(
         architecture='FC',
-        input_size=x_train.shape[1],
+        input_size=28*28,
         layers=[64, 32],
-        kernels=None,
+        out_channels=None,  # for cnn
+        kernel_sizes=None,  # for cnn
         device=device,
     )
     criterion = nn.CrossEntropyLoss()
@@ -60,9 +61,10 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     validation_loader = make_loader(x_val, y_val, batch_size=55)
     model = make_model(
         architecture='CNN',
-        input_size=None,
-        layers=None,
-        kernels=[8, 16],
+        layers=None,  # for fc
+        input_size=28*28,
+        out_channels=[8, 16],
+        kernel_sizes=[3, 7],
         device=device,
     )
     criterion = nn.CrossEntropyLoss()
@@ -70,7 +72,7 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     # test model
     expected_output_size = 10
     assert isinstance(model, ConvNet2L)
-    expected_sizes = [(1, 8, 5, 5), (8, 16, 5, 5), (784, expected_output_size)]
+    expected_sizes = [(1, 8, 3, 3), (8, 16, 7, 7), (784, expected_output_size)]
     actual_sizes = [
         (model.layer1[0].weight.shape[1], model.layer1[0].weight.shape[0], model.layer1[0].kernel_size[0], model.layer1[0].kernel_size[1]),  # noqa
         (model.layer2[0].weight.shape[1], model.layer2[0].weight.shape[0], model.layer2[0].kernel_size[0], model.layer2[0].kernel_size[1]),  # noqa
@@ -109,9 +111,10 @@ def test__train__fc(mnist_fc):  # noqa
     validation_loader = make_loader(x_val, y_val, batch_size=128)
     model = make_model(
         architecture='FC',
-        input_size=x_train.shape[1],
+        input_size=28*28,
         layers=[64],
-        kernels=None,
+        out_channels=None,  # for cnn
+        kernel_sizes=None,  # for cnn
         device=device,
     )
     criterion = nn.CrossEntropyLoss()
@@ -146,9 +149,10 @@ def test__train__cnn(mnist_cnn):  # noqa
     validation_loader = make_loader(x_val, y_val, batch_size=128)
     model = make_model(
         architecture='CNN',
-        input_size=None,
-        layers=None,
-        kernels=[8, 16],
+        input_size=28*28,
+        layers=None,  # for fc
+        out_channels=[8, 16],
+        kernel_sizes=[3, 7],
         device=device,
     )
     criterion = nn.CrossEntropyLoss()

@@ -22,9 +22,9 @@ from source.domain.pytorch_helpers import EarlyStopping, calculate_average_loss
 def get_data(architecture: str):  # noqa
     """Function is required by and called from `model_pipeline()`."""
     assert architecture in ['FC', 'CNN'], f"Architecture {architecture} not supported."
-
     x, y = fetch_openml('mnist_784', version=1, return_X_y=True, parser='auto')
     x = torch.tensor(x.values, dtype=torch.float32)
+    x = transform_data(x)
     y = torch.tensor(y.astype(int).values, dtype=torch.long)
 
     if architecture == 'CNN':
@@ -41,6 +41,17 @@ def get_data(architecture: str):  # noqa
     return x_train, x_val, x_test, y_train, y_val, y_test
 
 
+def transform_data(x: torch.tensor) -> torch.tensor:
+    """Transforms the data (e.g. normalizes generic x data from 0 to 1)."""
+    # Normalize the tensor
+    x_min = x.min()
+    x_max = x.max()
+    normalized_x = (x - x_min) / (x_max - x_min)
+    assert normalized_x.min() == 0
+    assert normalized_x.max() == 1
+    return normalized_x
+
+
 def model_pipeline(config: dict | None = None) -> nn.Module:
     """
     Builds the pipeline, data loaders, and model, and trains/tests. Results are logged to Weights
@@ -54,9 +65,7 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
         config: A dictionary of configuration parameters. If None, the configuration will be
             loaded from Weights and Biases (which implies a 'sweep' is running).
     """
-    # Make the data
-
-    # if no config is provided, a sweep is running, and we will get the config from wandb
+    # if no config is provided, a sweep is running, and we will get the config from wandb.config
     project = config.pop('project') if config else None
     tags = config.pop('tags', None) if config else None
     notes = config.pop('notes', None) if config else None
@@ -69,9 +78,10 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
         validation_loader = make_loader(x_val, y_val, batch_size=config.batch_size)
         model = make_model(
             architecture=config.architecture,
-            input_size=x_train.shape[1],
+            input_size=28*28,
             layers=config.layers if 'layers' in config else None,
-            kernels=config.kernels if 'kernels' in config else None,
+            out_channels=config.out_channels if 'out_channels' in config else None,
+            kernel_sizes=config.kernel_sizes if 'kernel_sizes' in config else None,
             device=device,
         )
         criterion = nn.CrossEntropyLoss()
@@ -114,19 +124,33 @@ def make_model(
         architecture: str,
         input_size: int,
         layers: list[int],
-        kernels: list[int],
+        out_channels: list[int, int],
+        kernel_sizes: list[int, int],
         device: str) -> nn.Module:
     """Make a model based on the architecture."""
     assert architecture in ['FC', 'CNN'], f"Unknown model type: {architecture}"
     assert device
     if architecture == 'FC':
+        assert input_size, "Input size must be provided for FC."
+        assert layers, "Layers must be provided for fully connected network."
         model = FullyConnectedNN(
             input_size=input_size,
             hidden_layers=layers,
             output_size=10,
         )
     elif architecture == 'CNN':
-        model = ConvNet2L(kernel_0=kernels[0], kernel_1=kernels[1], classes=10)
+        assert input_size, "Input size must be provided for a CNN."
+        assert out_channels, "Number of Filters/Channels must be provided for a CNN."
+        assert kernel_sizes, "Kernel sizes must be provided for a CNN."
+        dimension = int(math.sqrt(input_size))
+        model = ConvNet2L(
+            dimensions=(dimension, dimension),
+            l1_out_channels=out_channels[0],
+            l2_out_channels=out_channels[1],
+            l1_kernel_size=kernel_sizes[0],
+            l2_kernel_size=kernel_sizes[1],
+            classes=10,
+        )
     else:
         raise ValueError(f"Unknown model type: {architecture}")
     model = model.to(device)
@@ -231,7 +255,7 @@ def train(  # noqa: PLR0915
                         step=example_ct,
                     )
                 logging.info(
-                    f"Epoch: {epoch} | Learning Rate: {learning_rate:.3f}: "
+                    f"Epoch: {epoch} | Learning Rate: {learning_rate:.6f}: "
                     f"Avg Training/Validation Loss after {example_ct:,} examples: "
                     f"{avg_training_loss:.3f} | {average_validation_loss:.3f}",
                 )
