@@ -114,26 +114,40 @@ class ConvNet2L(nn.Module):
             l2_out_channels: int,
             l1_kernel_size: int,
             l2_kernel_size: int,
-            classes: int):
+            classes: int,
+            input_channels: int = 1,  # New parameter for input channels
+            use_batch_norm: bool = False,
+            dropout_p: float | None = None,  # Dropout probability
+            activation_type: str = 'relu',  # Type of activation function
+            include_second_fc_layer: bool = False,  # Whether to include a second FC layer
+            ):
         super().__init__()
         stride = 1
         pool_kernel_size = 2
         pool_stride = 2
-
         padding_1 = calculate_same_padding(l1_kernel_size, stride=stride)
         padding_2 = calculate_same_padding(l2_kernel_size, stride=stride)
-        self.layer1 = nn.Sequential(
+
+        # build layer 1
+        layers = [
             nn.Conv2d(
-                in_channels=1,
+                in_channels=input_channels,
                 out_channels=l1_out_channels,
                 kernel_size=l1_kernel_size,
                 stride=stride,
                 padding=padding_1,
             ),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
-        )
-        self.layer2 = nn.Sequential(
+            self._get_activation(activation_type),
+        ]
+        if use_batch_norm:
+            layers.append(nn.BatchNorm2d(l1_out_channels))
+        layers.append(nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride))
+        if dropout_p:
+            layers.append(nn.Dropout2d(p=dropout_p))
+        self.layer1 = nn.Sequential(*layers)
+
+        # build layer 2
+        layers = [
             nn.Conv2d(
                 in_channels=l1_out_channels,
                 out_channels=l2_out_channels,
@@ -141,11 +155,31 @@ class ConvNet2L(nn.Module):
                 stride=stride,
                 padding=padding_2,
             ),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
-        )
+            self._get_activation(activation_type),
+        ]
+        if use_batch_norm:
+            layers.append(nn.BatchNorm2d(l2_out_channels))
+        layers.append(nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride))
+        if dropout_p:
+            layers.append(nn.Dropout2d(p=dropout_p))
+        self.layer2 = nn.Sequential(*layers)
+
         self.flatten = nn.Flatten()
-        self.fc = nn.Linear(self._get_linear_input_size(dimensions), classes)
+        fc_input_size = self._get_linear_input_size(dimensions)
+        # Build the fully connected layers
+        fc_layers = []
+        if include_second_fc_layer:
+            second_fc_size = fc_input_size // 2
+            fc_layers.extend([
+                nn.Linear(fc_input_size, second_fc_size),
+                self._get_activation(),
+            ])
+            if dropout_p:
+                fc_layers.append(nn.Dropout(p=dropout_p))
+            fc_layers.append(nn.Linear(second_fc_size, classes))
+        else:
+            fc_layers.append(nn.Linear(fc_input_size, classes))
+        self.fc = nn.Sequential(*fc_layers)
 
     def _get_linear_input_size(self, dimensions: tuple[int, int]) -> int:
         dummy_input = torch.zeros(1, 1, dimensions[0], dimensions[1])
@@ -154,6 +188,14 @@ class ConvNet2L(nn.Module):
             dummy_output = self.layer2(dummy_output)
             dummy_output = self.flatten(dummy_output)
         return dummy_output.size(1)
+
+    @staticmethod
+    def _get_activation(activation_type: str) -> nn.Module:
+        if activation_type == 'leaky_relu':
+            return nn.LeakyReLU()
+        if activation_type == 'relu':
+            return nn.ReLU()
+        raise ValueError(f'Unknown activation type: {activation_type}')
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass."""
