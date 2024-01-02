@@ -19,6 +19,15 @@ from source.domain.architectures import FullyConnectedNN, ConvNet2L
 from source.domain.pytorch_helpers import EarlyStopping, calculate_average_loss
 
 
+def get_device() -> str:
+    """Returns the device based on the system configuration."""
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+    if torch.backends.mps.is_available():
+        return torch.device('mps')  # https://pytorch.org/docs/stable/notes/mps.html
+    return torch.device('cpu')
+
+
 def get_data(architecture: str):  # noqa
     """Function is required by and called from `model_pipeline()`."""
     assert architecture in ['FC', 'CNN'], f"Architecture {architecture} not supported."

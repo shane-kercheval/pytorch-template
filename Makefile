@@ -75,6 +75,10 @@ sweep_cnn_3:
 		-device=cuda \
 		-count=90
 
+num_combinations:
+	python source/entrypoints/cli.py num-combinations \
+		-config_file=source/entrypoints/sweep_cnn_3.yaml
+
 pytorch_fully:
 	jupyter nbconvert --execute --to html source/notebooks/pytorch_fully_connected.ipynb
 	mv source/notebooks/pytorch_fully_connected.html output/pytorch_fully_connected.html

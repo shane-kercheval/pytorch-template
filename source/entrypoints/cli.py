@@ -9,7 +9,7 @@ import logging
 import os
 import click
 import torch
-from source.domain.experiment import model_pipeline
+from source.domain.experiment import model_pipeline, get_device
 
 from dotenv import load_dotenv
 load_dotenv()  # EXPECTS WANDB_API_KEY TO BE SET IN .env FILE
@@ -58,7 +58,8 @@ def sweep(
         config_file:
             Path to the YAML configuration file.
         device:
-            Device to use for training. If None, will use GPU if available.
+            Device to use for training. If None, will use 'cuda' if available, 'mps' if available,
+            and 'cpu' otherwise.
         count:
             Number of runs to execute. If None, will execute all runs. Ignored if
             config['method'] == 'grid'.
@@ -67,9 +68,9 @@ def sweep(
         config = yaml.safe_load(f)
 
     pprint.pprint(config)
-    logging.info(f"Number of grid combinations: {np.cumprod([len(v['values']) for v in config['parameters'].values() if 'values' in v])[-1]}")  # noqa: E501
+    logging.info(f"Number of parameter combinations: {_num_combinations(config)}")
     if device is None:
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        device = get_device()
     logging.info(f"Device: {device}")
     config['parameters']['device'] = {'value': device}
 
@@ -78,6 +79,18 @@ def sweep(
     logging.info(f"Run count: {count}")
     wandb.agent(sweep_id, model_pipeline, count=count)
 
+
+@main.command()
+@click.option('-config_file', type=str)
+def num_combinations(config_file: str) -> None:
+    """Print the number of grid combinations."""
+    with open(config_file) as f:
+        config = yaml.safe_load(f)
+    print(f"Number of parameter combinations: {_num_combinations(config)}")
+
+
+def _num_combinations(config: dict) -> int:
+    return np.cumprod([len(v['values']) for v in config['parameters'].values() if 'values' in v])[-1]  # noqa
 
 if __name__ == '__main__':
     main()

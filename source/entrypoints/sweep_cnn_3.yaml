@@ -1,8 +1,8 @@
 project: pytorch-demo-v2
 notes: changed to tune out_channels and kernel_sizes
+method: random
 # method: grid
-# method: random
-method: bayes
+# method: bayes
 metric:
   # set this to `validation_loss` if using `bayes` method above
   # setting this to test_loss so that w&b will use that to generate the parallel coordinates
