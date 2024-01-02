@@ -122,7 +122,6 @@ class ConvNet2L(nn.Module):
 
         padding_1 = calculate_same_padding(l1_kernel_size, stride=stride)
         padding_2 = calculate_same_padding(l2_kernel_size, stride=stride)
-
         self.layer1 = nn.Sequential(
             nn.Conv2d(
                 in_channels=1,
@@ -132,7 +131,8 @@ class ConvNet2L(nn.Module):
                 padding=padding_1,
             ),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride))
+            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
+        )
         self.layer2 = nn.Sequential(
             nn.Conv2d(
                 in_channels=l1_out_channels,
@@ -142,8 +142,9 @@ class ConvNet2L(nn.Module):
                 padding=padding_2,
             ),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride))
-
+            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
+        )
+        self.flatten = nn.Flatten()
         self.fc = nn.Linear(self._get_linear_input_size(dimensions), classes)
 
     def _get_linear_input_size(self, dimensions: tuple[int, int]) -> int:
@@ -151,11 +152,12 @@ class ConvNet2L(nn.Module):
         with torch.no_grad():
             dummy_output = self.layer1(dummy_input)
             dummy_output = self.layer2(dummy_output)
-        return dummy_output.size(1) * dummy_output.size(2) * dummy_output.size(3)
+            dummy_output = self.flatten(dummy_output)
+        return dummy_output.size(1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass."""
         out = self.layer1(x)
         out = self.layer2(out)
-        out = out.reshape(out.size(0), -1)
+        out = self.flatten(out)
         return self.fc(out)
