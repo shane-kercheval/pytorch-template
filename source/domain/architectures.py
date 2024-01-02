@@ -117,7 +117,8 @@ class ConvNet2L(nn.Module):
             classes: int,
             input_channels: int = 1,  # New parameter for input channels
             use_batch_norm: bool = False,
-            dropout_p: float | None = None,  # Dropout probability
+            conv_dropout_p: float | None = None,  # Dropout probability
+            fc_dropout_p: float | None = None,  # Dropout probability
             activation_type: str = 'relu',  # Type of activation function
             include_second_fc_layer: bool = False,  # Whether to include a second FC layer
             ):
@@ -137,13 +138,13 @@ class ConvNet2L(nn.Module):
                 stride=stride,
                 padding=padding_1,
             ),
-            self._get_activation(activation_type),
         ]
         if use_batch_norm:
             layers.append(nn.BatchNorm2d(l1_out_channels))
+        layers.append(self._get_activation(activation_type))
         layers.append(nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride))
-        if dropout_p:
-            layers.append(nn.Dropout2d(p=dropout_p))
+        if conv_dropout_p:
+            layers.append(nn.Dropout2d(p=conv_dropout_p))
         self.layer1 = nn.Sequential(*layers)
 
         # build layer 2
@@ -155,13 +156,13 @@ class ConvNet2L(nn.Module):
                 stride=stride,
                 padding=padding_2,
             ),
-            self._get_activation(activation_type),
         ]
         if use_batch_norm:
             layers.append(nn.BatchNorm2d(l2_out_channels))
+        layers.append(self._get_activation(activation_type))
         layers.append(nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride))
-        if dropout_p:
-            layers.append(nn.Dropout2d(p=dropout_p))
+        if conv_dropout_p:
+            layers.append(nn.Dropout2d(p=conv_dropout_p))
         self.layer2 = nn.Sequential(*layers)
 
         self.flatten = nn.Flatten()
@@ -174,8 +175,8 @@ class ConvNet2L(nn.Module):
                 nn.Linear(fc_input_size, second_fc_size),
                 self._get_activation(),
             ])
-            if dropout_p:
-                fc_layers.append(nn.Dropout(p=dropout_p))
+            if fc_dropout_p:
+                fc_layers.append(nn.Dropout(p=fc_dropout_p))
             fc_layers.append(nn.Linear(second_fc_size, classes))
         else:
             fc_layers.append(nn.Linear(fc_input_size, classes))

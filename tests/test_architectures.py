@@ -21,7 +21,7 @@ def test_initialization(input_channels, use_batch_norm, dropout_p, activation_ty
         l1_out_channels=16,
         l2_out_channels=32,
         l1_kernel_size=3,
-        l2_kernel_size=3,
+        l2_kernel_size=5,
         classes=NUM_CLASSES,
         input_channels=input_channels,
         use_batch_norm=use_batch_norm,

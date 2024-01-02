@@ -71,7 +71,12 @@ parameters:
       - 0.01
       - 0.005
       - 0.001
-  dropout:
+  conv_dropout_p:
+    values:
+      - 0
+      - 0.1
+      - 0.2
+  fc_dropout_p:
     values:
       - 0
       - 0.5
