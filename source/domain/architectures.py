@@ -110,11 +110,9 @@ class ConvNet2L(nn.Module):
     def __init__(
             self,
             dimensions: tuple[int, int],
-            l1_out_channels: int,
-            l2_out_channels: int,
-            l1_kernel_size: int,
-            l2_kernel_size: int,
-            classes: int,
+            output_size: int,
+            out_channels: tuple[int, int],
+            kernel_sizes: tuple[int, int],
             input_channels: int = 1,  # New parameter for input channels
             use_batch_norm: bool = False,
             conv_dropout_p: float | None = None,  # Dropout probability
@@ -123,6 +121,8 @@ class ConvNet2L(nn.Module):
             include_second_fc_layer: bool = False,  # Whether to include a second FC layer
             ):
         super().__init__()
+        l1_out_channels, l2_out_channels = out_channels
+        l1_kernel_size, l2_kernel_size = kernel_sizes
         stride = 1
         pool_kernel_size = 2
         pool_stride = 2
@@ -177,9 +177,9 @@ class ConvNet2L(nn.Module):
             ])
             if fc_dropout_p:
                 fc_layers.append(nn.Dropout(p=fc_dropout_p))
-            fc_layers.append(nn.Linear(second_fc_size, classes))
+            fc_layers.append(nn.Linear(second_fc_size, output_size))
         else:
-            fc_layers.append(nn.Linear(fc_input_size, classes))
+            fc_layers.append(nn.Linear(fc_input_size, output_size))
         self.fc = nn.Sequential(*fc_layers)
 
     def _get_linear_input_size(self, dimensions: tuple[int, int], input_channels: int) -> int:

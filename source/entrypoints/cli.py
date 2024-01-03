@@ -8,8 +8,7 @@ import logging.config
 import logging
 import os
 import click
-import torch
-from source.domain.experiment import model_pipeline, get_device
+from source.domain.experiment import model_pipeline, get_available_device
 
 from dotenv import load_dotenv
 load_dotenv()  # EXPECTS WANDB_API_KEY TO BE SET IN .env FILE
@@ -34,10 +33,8 @@ def run(config_file: str, device: str | None = None) -> None:
     """Execute a single 'run' on Weights and Biases."""
     with open(config_file) as f:
         config = yaml.safe_load(f)
-
-    pprint.pprint(config)
-    if device is None:
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        pprint.pprint(config)
+    device = get_available_device() if device is None else device
     logging.info(f"Device: {device}")
     config['device'] = device
     _ = model_pipeline(config)
@@ -70,7 +67,7 @@ def sweep(
     pprint.pprint(config)
     logging.info(f"Number of parameter combinations: {_num_combinations(config)}")
     if device is None:
-        device = get_device()
+        device = get_available_device()
     logging.info(f"Device: {device}")
     config['parameters']['device'] = {'value': device}
 

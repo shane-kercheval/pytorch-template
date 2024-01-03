@@ -9,7 +9,7 @@ from source.domain.architectures import ConvNet2L
 
 @pytest.mark.parametrize('input_channels', [1, 3])
 @pytest.mark.parametrize('image_size', [(28, 28), (20, 100)])
-@pytest.mark.parametrize('channels', [(16, 32), (32, 64)])
+@pytest.mark.parametrize('out_channels', [(16, 32), (32, 64)])
 @pytest.mark.parametrize('kernel_sizes', [(3, 5), (5, 3)])
 @pytest.mark.parametrize('num_classes', [5, 10])
 @pytest.mark.parametrize('use_batch_norm', [True, False])
@@ -20,7 +20,7 @@ from source.domain.architectures import ConvNet2L
 def test_convnet2l_initialization(  # noqa
         input_channels: int,
         image_size: tuple,
-        channels: tuple,
+        out_channels: tuple,
         kernel_sizes: tuple,
         num_classes: int,
         use_batch_norm: bool,
@@ -31,11 +31,9 @@ def test_convnet2l_initialization(  # noqa
     model = ConvNet2L(
         dimensions=image_size,
         input_channels=input_channels,
-        l1_out_channels=channels[0],
-        l2_out_channels=channels[1],
-        l1_kernel_size=kernel_sizes[0],
-        l2_kernel_size=kernel_sizes[1],
-        classes=num_classes,
+        out_channels=out_channels,
+        kernel_sizes=kernel_sizes,
+        output_size=num_classes,
         use_batch_norm=use_batch_norm,
         conv_dropout_p=conv_dropout_p,
         fc_dropout_p=fc_dropout_p,
@@ -47,7 +45,7 @@ def test_convnet2l_initialization(  # noqa
     assert model.fc is not None
     assert isinstance(model.layer1[0], nn.Conv2d)
     assert model.layer1[0].in_channels == input_channels
-    assert model.layer1[0].out_channels == channels[0]
+    assert model.layer1[0].out_channels == out_channels[0]
     if use_batch_norm:
         next_index = 2
         assert isinstance(model.layer1[1], nn.BatchNorm2d)
@@ -62,8 +60,8 @@ def test_convnet2l_initialization(  # noqa
         assert not any(isinstance(layer, nn.Dropout2d) for layer in model.layer1)
 
     assert isinstance(model.layer2[0], nn.Conv2d)
-    assert model.layer2[0].in_channels == channels[0]
-    assert model.layer2[0].out_channels == channels[1]
+    assert model.layer2[0].in_channels == out_channels[0]
+    assert model.layer2[0].out_channels == out_channels[1]
     if use_batch_norm:
         next_index = 2
         assert isinstance(model.layer2[1], nn.BatchNorm2d)

@@ -2,21 +2,29 @@
 import torch
 from torch import nn
 from source.domain.architectures import FullyConnectedNN, ConvNet2L
-from source.domain.experiment import train, evaluate, make_model, make_optimizer, make_loader
+from source.domain.experiment import (
+    train,
+    evaluate,
+    make_model,
+    make_optimizer,
+    make_loader,
+    get_available_device,
+)
 
 
 def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = get_available_device()
     x_train, x_val, _, y_train, y_val, _ = mnist_fc
     train_loader = make_loader(x_train, y_train, batch_size=55)
     validation_loader = make_loader(x_val, y_val, batch_size=55)
     model = make_model(
-        architecture='FC',
         input_size=28*28,
-        layers=[64, 32],
-        out_channels=None,  # for cnn
-        kernel_sizes=None,  # for cnn
-        device=device,
+        output_size=10,
+        config = {
+            'architecture': 'FC',
+            'hidden_layers': [64, 32],
+            'device': device,
+        },
     )
     criterion = nn.CrossEntropyLoss()
     optimizer_creator = make_optimizer(optimizer='sgd', model=model)
@@ -30,7 +38,7 @@ def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
     ]
     assert expected_sizes == actual_sizes
     # check that the model was sent to the correct device
-    assert model.layers[1].weight.device.type == device
+    assert model.layers[1].weight.device.type == device.type
     # ensure model can do forward pass given the correct dataset (fc)
     x_batch, y_batch = next(iter(train_loader))
     x_batch = x_batch.to(device)
@@ -55,17 +63,19 @@ def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
 
 
 def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = get_available_device()
     x_train, x_val, _, y_train, y_val, _ = mnist_cnn
     train_loader = make_loader(x_train, y_train, batch_size=55)
     validation_loader = make_loader(x_val, y_val, batch_size=55)
     model = make_model(
-        architecture='CNN',
-        layers=None,  # for fc
         input_size=28*28,
-        out_channels=[8, 16],
-        kernel_sizes=[3, 7],
-        device=device,
+        output_size=10,
+        config={
+            'architecture': 'CNN',
+            'out_channels': [8, 16],
+            'kernel_sizes': [3, 7],
+            'device': device,
+        },
     )
     criterion = nn.CrossEntropyLoss()
     optimizer_creator = make_optimizer(optimizer='adam', model=model)
@@ -76,11 +86,11 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     actual_sizes = [
         (model.layer1[0].weight.shape[1], model.layer1[0].weight.shape[0], model.layer1[0].kernel_size[0], model.layer1[0].kernel_size[1]),  # noqa
         (model.layer2[0].weight.shape[1], model.layer2[0].weight.shape[0], model.layer2[0].kernel_size[0], model.layer2[0].kernel_size[1]),  # noqa
-        (model.fc.weight.shape[1], model.fc.weight.shape[0]),
+        (model.fc[1].weight.shape[1], model.fc[1].weight.shape[0]),
     ]
     assert expected_sizes == actual_sizes
     # check that the model was sent to the correct device
-    assert model.layer1[0].weight.device.type == device
+    assert model.layer1[0].weight.device.type == device.type
     # ensure model can do forward pass given the correct dataset (cnn)
     x_batch, y_batch = next(iter(train_loader))
     x_batch = x_batch.to(device)
@@ -105,17 +115,18 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
 
 
 def test__train__fc(mnist_fc):  # noqa
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = get_available_device()
     x_train, x_val, x_test, y_train, y_val, y_test = mnist_fc
     train_loader = make_loader(x_train, y_train, batch_size=128)
     validation_loader = make_loader(x_val, y_val, batch_size=128)
     model = make_model(
-        architecture='FC',
         input_size=28*28,
-        layers=[64],
-        out_channels=None,  # for cnn
-        kernel_sizes=None,  # for cnn
-        device=device,
+        output_size=10,
+        config={
+            'architecture': 'FC',
+            'hidden_layers': [64],
+            'device': device,
+        },
     )
     criterion = nn.CrossEntropyLoss()
     optimizer_creator = make_optimizer(optimizer='sgd', model=model)
@@ -143,17 +154,19 @@ def test__train__fc(mnist_fc):  # noqa
     )
 
 def test__train__cnn(mnist_cnn):  # noqa
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = get_available_device()
     x_train, x_val, x_test, y_train, y_val, y_test = mnist_cnn
     train_loader = make_loader(x_train, y_train, batch_size=128)
     validation_loader = make_loader(x_val, y_val, batch_size=128)
     model = make_model(
-        architecture='CNN',
         input_size=28*28,
-        layers=None,  # for fc
-        out_channels=[8, 16],
-        kernel_sizes=[3, 7],
-        device=device,
+        output_size=10,
+        config={
+            'architecture': 'CNN',
+            'out_channels': [8, 16],
+            'kernel_sizes': [3, 7],
+            'device': device,
+        },
     )
     criterion = nn.CrossEntropyLoss()
     optimizer_creator = make_optimizer(optimizer='adam', model=model)
