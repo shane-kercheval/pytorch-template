@@ -165,15 +165,15 @@ class ConvNet2L(nn.Module):
             layers.append(nn.Dropout2d(p=conv_dropout_p))
         self.layer2 = nn.Sequential(*layers)
 
-        self.flatten = nn.Flatten()
-        fc_input_size = self._get_linear_input_size(dimensions)
+        fc_input_size = self._get_linear_input_size(dimensions, input_channels)
         # Build the fully connected layers
         fc_layers = []
+        fc_layers.append(nn.Flatten())
         if include_second_fc_layer:
             second_fc_size = fc_input_size // 2
             fc_layers.extend([
                 nn.Linear(fc_input_size, second_fc_size),
-                self._get_activation(),
+                self._get_activation(activation_type),
             ])
             if fc_dropout_p:
                 fc_layers.append(nn.Dropout(p=fc_dropout_p))
@@ -182,13 +182,13 @@ class ConvNet2L(nn.Module):
             fc_layers.append(nn.Linear(fc_input_size, classes))
         self.fc = nn.Sequential(*fc_layers)
 
-    def _get_linear_input_size(self, dimensions: tuple[int, int]) -> int:
-        dummy_input = torch.zeros(1, 1, dimensions[0], dimensions[1])
+    def _get_linear_input_size(self, dimensions: tuple[int, int], input_channels: int) -> int:
+        """Calculate the input size of the linear layer."""
+        dummy_input = torch.zeros(1, input_channels, dimensions[0], dimensions[1])
         with torch.no_grad():
             dummy_output = self.layer1(dummy_input)
             dummy_output = self.layer2(dummy_output)
-            dummy_output = self.flatten(dummy_output)
-        return dummy_output.size(1)
+        return nn.Flatten()(dummy_output).size(1)
 
     @staticmethod
     def _get_activation(activation_type: str) -> nn.Module:
@@ -202,5 +202,4 @@ class ConvNet2L(nn.Module):
         """Forward pass."""
         out = self.layer1(x)
         out = self.layer2(out)
-        out = self.flatten(out)
         return self.fc(out)
