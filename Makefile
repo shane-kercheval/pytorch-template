@@ -46,40 +46,24 @@ tests: linting
 open_coverage:
 	open 'htmlcov/index.html'
 
-
+# default / example runs
 run_default_fc:
 	python source/entrypoints/cli.py run -config_file=source/entrypoints/default_run_fc.yaml
 
 run_default_cnn:
 	python source/entrypoints/cli.py run -config_file=source/entrypoints/default_run_cnn.yaml
 
-run_fc_1:
-	python source/entrypoints/cli.py run \
-		-config_file=source/entrypoints/run_fc_1.yaml \
-		-device=cuda
-
-run_cnn_1:
-	python source/entrypoints/cli.py run \
-		-config_file=source/entrypoints/run_cnn_1.yaml \
-		-device=cuda
-
-sweep_fc_1_bayes:
+# default / example sweeps
+sweep_default_fc:
 	python source/entrypoints/cli.py sweep \
-		-config_file=source/entrypoints/sweep_fc_1_bayes.yaml \
-		-device=cpu \
-		-count=70
+		-config_file=source/entrypoints/default_sweep_fc.yaml
+		# using grid search via config setting
+		# -runs=70
 
-sweep_cnn_2_bayes:
+sweep_default_cnn:
 	python source/entrypoints/cli.py sweep \
-		-config_file=source/entrypoints/sweep_cnn_2_bayes.yaml \
-		-device=cuda \
-		-count=70
-
-sweep_cnn_3:
-	python source/entrypoints/cli.py sweep \
-		-config_file=source/entrypoints/sweep_cnn_3.yaml \
-		-device=cuda \
-		-count=90
+		-config_file=source/entrypoints/default_sweep_cnn.yaml \
+		-runs=70
 
 num_combinations_default_cnn:
 	python source/entrypoints/cli.py num-combinations \

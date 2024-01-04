@@ -1,7 +1,4 @@
 project: pytorch-demo
-tags:
-  - default
-notes: default sweep configuration for a fully connected network
 method: grid
 # method: random
 # method: bayes

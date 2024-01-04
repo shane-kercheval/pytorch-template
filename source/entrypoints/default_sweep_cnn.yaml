@@ -1,7 +1,4 @@
 project: pytorch-demo
-tags:
-  - default
-notes: default sweep configuration for a convolutional neural network
 method: random  # too many combinations for grid; perhaps try bayes but bayes seems to ignore values that had one bad score without trying them in other combinations
 # method: grid
 # method: bayes

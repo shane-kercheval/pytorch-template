@@ -23,10 +23,10 @@ from source.domain.pytorch_helpers import EarlyStopping, calculate_average_loss
 def get_available_device() -> str:
     """Returns the device based on the system configuration."""
     if torch.cuda.is_available():
-        return torch.device('cuda')
+        return torch.device('cuda').type
     if torch.backends.mps.is_available():
-        return torch.device('mps')  # https://pytorch.org/docs/stable/notes/mps.html
-    return torch.device('cpu')
+        return torch.device('mps').type  # https://pytorch.org/docs/stable/notes/mps.html
+    return torch.device('cpu').type
 
 
 def get_data(architecture: str):  # noqa
