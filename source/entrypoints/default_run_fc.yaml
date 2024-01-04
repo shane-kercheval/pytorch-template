@@ -1,7 +1,7 @@
 project: pytorch-demo
 tags:
   - default
-notes: Default configuration for a fully connected network
+notes: default configuration for a fully connected network
 architecture: FC
 # experiment parameters
 epochs: 40

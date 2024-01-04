@@ -1,10 +1,10 @@
 project: pytorch-demo
-notes: default sweep configuration for a fully connected network
 tags:
   - default
+notes: default sweep configuration for a fully connected network
 method: grid
 # method: random
-method: bayes
+# method: bayes
 metric:
   # set this to `validation_loss` if using `bayes` method above
   # setting this to test_loss so that w&b will use that to generate the parallel coordinates
@@ -15,20 +15,14 @@ parameters:
   ####
   # configuration parameters (fixed; via `value`)
   ####
-  # project:
-  #   value: project_name
-  tags:
-    value:
-      - pytorch
-      - demo
-  notes:
-    value: Notes
   epochs:
-    value: 40
+    value: 100
   architecture:
     value: FC
   num_reduce_learning_rate:
     value: 5  # we decrease the learning rate 5 times
+  # optimizer:
+  #   value: sgd
   ####
   # hyperparameters (tuned; via e.g `values` or `distribution`)
   ####

@@ -1,7 +1,7 @@
 project: pytorch-demo
-notes: default sweep configuration for a convolutional neural network
 tags:
   - default
+notes: default sweep configuration for a convolutional neural network
 method: random  # too many combinations for grid; perhaps try bayes but bayes seems to ignore values that had one bad score without trying them in other combinations
 # method: grid
 # method: bayes
@@ -21,15 +21,15 @@ parameters:
     value: CNN
   num_reduce_learning_rate:
     value: 5  # we decrease the learning rate 5 times
-  optimizer:
-    value: sgd
+  # optimizer:
+  #   value: sgd
   ####
   # hyperparameters (tuned; via e.g `values` or `distribution`)
   ####
-  # optimizer:
-  #   values:
-  #     - adam
-  #     - sgd
+  optimizer:
+    values:
+      - adam
+      - sgd
   out_channels:
     values:
       - - 8
