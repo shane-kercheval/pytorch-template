@@ -1,6 +1,6 @@
 project: pytorch-demo
-# tags:
-#   - tag
+tags:
+  - default
 notes: Default configuration for a fully connected network
 architecture: FC
 # experiment parameters
@@ -10,6 +10,6 @@ optimizer: adam
 learning_rate: 0.005
 num_reduce_learning_rate: 3  # we decrease the learning rate 5 times
 # model parameters
-hiden_layers:
+hidden_layers:
   - 500
   - 100

@@ -47,6 +47,12 @@ open_coverage:
 	open 'htmlcov/index.html'
 
 
+run_default_fc:
+	python source/entrypoints/cli.py run -config_file=source/entrypoints/default_run_fc.yaml
+
+run_default_cnn:
+	python source/entrypoints/cli.py run -config_file=source/entrypoints/default_run_cnn.yaml
+
 run_fc_1:
 	python source/entrypoints/cli.py run \
 		-config_file=source/entrypoints/run_fc_1.yaml \
@@ -75,9 +81,13 @@ sweep_cnn_3:
 		-device=cuda \
 		-count=90
 
-num_combinations:
+num_combinations_default_cnn:
 	python source/entrypoints/cli.py num-combinations \
-		-config_file=source/entrypoints/sweep_cnn_4.yaml
+		-config_file=source/entrypoints/default_sweep_cnn.yaml
+
+num_combinations_default_fc:
+	python source/entrypoints/cli.py num-combinations \
+		-config_file=source/entrypoints/default_sweep_fc.yaml
 
 pytorch_fully:
 	jupyter nbconvert --execute --to html source/notebooks/pytorch_fully_connected.ipynb

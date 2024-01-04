@@ -1,5 +1,8 @@
-project: pytorch-demo-v2
-# method: grid
+project: pytorch-demo
+notes: default sweep configuration for a fully connected network
+tags:
+  - default
+method: grid
 # method: random
 method: bayes
 metric:
@@ -33,7 +36,7 @@ parameters:
     values:
       - adam
       - sgd
-  layers:
+  hidden_layers:
     values:
       - - 500
         - 100
