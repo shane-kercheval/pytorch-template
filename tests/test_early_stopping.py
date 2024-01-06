@@ -293,7 +293,6 @@ def test_early_stopping_delta_relative_5():  # noqa
         early_stopping(loss=current_lowest_loss - 1)
 
 
-
 def test_early_stopping_with_reset():  # noqa
     class MockPytorchModel:
         def __init__(self) -> None:
