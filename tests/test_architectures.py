@@ -3,7 +3,7 @@
 import pytest
 import torch
 from torch import nn
-from source.domain.architectures import ConvNet2L
+from source.library.architectures import ConvNet2L
 
 
 

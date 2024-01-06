@@ -7,7 +7,7 @@ import os
 
 import logging.config
 
-from source.domain.experiment import get_data
+from source.library.experiment import get_data
 
 logging.config.fileConfig(
     os.path.join(os.getcwd(), 'source/config/logging_to_file.conf'),

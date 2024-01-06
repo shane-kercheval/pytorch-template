@@ -6,8 +6,8 @@ from torch import nn
 from torch import optim
 import numpy as np
 
-from source.domain.pytorch_helpers import EarlyStopping, PyTorchTrainer
-from source.domain.architectures import FullyConnectedNN
+from source.library.pytorch_helpers import EarlyStopping, PyTorchTrainer
+from source.library.architectures import FullyConnectedNN
 from tests.helpers import get_test_file_path
 
 

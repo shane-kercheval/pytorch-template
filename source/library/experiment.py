@@ -16,8 +16,8 @@ from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 
-from source.domain.architectures import FullyConnectedNN, ConvNet2L
-from source.domain.pytorch_helpers import EarlyStopping, calculate_average_loss
+from source.library.architectures import FullyConnectedNN, ConvNet2L
+from source.library.pytorch_helpers import EarlyStopping, calculate_average_loss
 
 
 def get_available_device() -> str:
@@ -97,6 +97,9 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
             epochs=config.epochs,
             learning_rate=config.learning_rate,
             device=config.device,
+            early_stopping_patience=config.early_stopping_patience,
+            early_stopping_delta=config.early_stopping_delta,
+            early_stopping_delta_type=config.early_stopping_delta_type,
             num_reduce_learning_rate=config.num_reduce_learning_rate,
         )
         evaluate(
@@ -176,7 +179,10 @@ def train(  # noqa: PLR0915
         epochs: int,
         learning_rate: float,
         device: str,
-        num_reduce_learning_rate: int,
+        early_stopping_patience: int = 3,
+        early_stopping_delta: float = 0.05,
+        early_stopping_delta_type: str = 'relative',
+        num_reduce_learning_rate: int = 5,
         log_wandb: bool = True,
         ) -> None:
     """
@@ -204,9 +210,9 @@ def train(  # noqa: PLR0915
 
     early_stopping = EarlyStopping(
         model=model,
-        patience=3,
-        delta=0.05,  # new loss is required to be >%5 better than previous best
-        delta_type='relative',
+        patience=early_stopping_patience,
+        delta=early_stopping_delta,
+        delta_type=early_stopping_delta_type,
         verbose=True,
     )
     stop_count = 0

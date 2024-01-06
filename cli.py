@@ -31,6 +31,7 @@ def main() -> None:
 @click.option('-device', type=str, default=None)
 def run(config_file: str, device: str | None = None) -> None:
     """Execute a single 'run' on Weights and Biases."""
+    logging.info(f"Configuration file: {config_file}")
     with open(config_file) as f:
         config = yaml.safe_load(f)
         pprint.pprint(config)
@@ -61,9 +62,9 @@ def sweep(
             Number of runs to execute. If None, will execute all runs. Ignored if
             config['method'] == 'grid'.
     """
+    logging.info(f"Configuration file: {config_file}")
     with open(config_file) as f:
         config = yaml.safe_load(f)
-
     pprint.pprint(config)
     num_combinations = _num_combinations(config)
     logging.info(f"Number of parameter combinations: {num_combinations}")
@@ -86,6 +87,7 @@ def sweep(
 @click.option('-config_file', type=str)
 def num_combinations(config_file: str) -> None:
     """Print the number of grid combinations."""
+    print(f"Configuration file: {config_file}")
     with open(config_file) as f:
         config = yaml.safe_load(f)
     print(f"Number of parameter combinations: {_num_combinations(config)}")

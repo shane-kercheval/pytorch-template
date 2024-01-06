@@ -1,8 +1,8 @@
 """Test the experiment module."""
 import torch
 from torch import nn
-from source.domain.architectures import FullyConnectedNN, ConvNet2L
-from source.domain.experiment import (
+from source.library.architectures import FullyConnectedNN, ConvNet2L
+from source.library.experiment import (
     train,
     evaluate,
     make_model,
@@ -38,7 +38,7 @@ def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
     ]
     assert expected_sizes == actual_sizes
     # check that the model was sent to the correct device
-    assert model.layers[1].weight.device.type == device.type
+    assert model.layers[1].weight.device.type == device
     # ensure model can do forward pass given the correct dataset (fc)
     x_batch, y_batch = next(iter(train_loader))
     x_batch = x_batch.to(device)
@@ -90,7 +90,7 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     ]
     assert expected_sizes == actual_sizes
     # check that the model was sent to the correct device
-    assert model.layer1[0].weight.device.type == device.type
+    assert model.layer1[0].weight.device.type == device
     # ensure model can do forward pass given the correct dataset (cnn)
     x_batch, y_batch = next(iter(train_loader))
     x_batch = x_batch.to(device)
