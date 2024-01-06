@@ -1,21 +1,26 @@
-project: pytorch-demo
-method: random  # too many combinations for grid; perhaps try bayes but bayes seems to ignore values that had one bad score without trying them in other combinations
+project: pytorch-template
+# too many combinations for grid; perhaps try bayes but bayes seems to ignore values that had one
+# bad score without trying them in other combinations; perhaps retry bayes when we narrow down the
+# hyperparameter space
+method: random
 # method: grid
 # method: bayes
 metric:
-  # set this to `validation_loss` if using `bayes` method above
-  # setting this to test_loss so that w&b will use that to generate the parallel coordinates
-  # best_validation_loss is the loss from the best early stopping epoch
-  name: best_validation_loss
   goal: minimize
+  # setting this to test_loss so that w&b will use that to generate the parallel coordinates
+  name: test_loss
+  # name: best_validation_loss  # if `bayes`
+  # set `name` to use validation loss (i.e. `best_validation_loss`) if using `bayes` method above;
+  # best_validation_loss is the loss from the best early stopping epoch
+  # we don't want bayes to make decisions based on the test data/loss
 parameters:
   ####
   # configuration parameters (fixed; via `value`)
   ####
-  epochs:
-    value: 100
   architecture:
     value: CNN
+  epochs:
+    value: 100
   num_reduce_learning_rate:
     value: 5  # we decrease the learning rate 5 times
   # optimizer:
@@ -23,10 +28,29 @@ parameters:
   ####
   # hyperparameters (tuned; via e.g `values` or `distribution`)
   ####
+  # experiment parameters
   optimizer:
     values:
       - adam
       - sgd
+  learning_rate:
+    values:
+      - 0.01
+      - 0.005
+      - 0.001
+  batch_size:
+    values:
+      - 32
+      - 64
+      - 128
+      # - 256
+  # batch_size:
+  #   # integers between 32 and 256 with evenly-distributed logarithms
+  #   distribution: q_log_uniform_values
+  #   q: 8
+  #   min: 32
+  #   max: 256
+  # model parameters
   out_channels:
     values:
       - - 8
@@ -49,33 +73,16 @@ parameters:
         - 5
       - - 3
         - 7
-  batch_size:
+  use_batch_norm:
     values:
-      - 32
-      - 64
-      - 128
-      # - 256
-  # batch_size:
-  #   # integers between 32 and 256 with evenly-distributed logarithms
-  #   distribution: q_log_uniform_values
-  #   q: 8
-  #   min: 32
-  #   max: 256
-  learning_rate:
-    values:
-      - 0.01
-      - 0.005
-      - 0.001
+      - True
+      - False
   conv_dropout_p:
     values:
       - 0
       - 0.1
       - 0.2
-  fc_dropout_p:
-    values:
-      - 0
-      - 0.5
-  use_batch_norm:
+  include_second_fc_layer:
     values:
       - True
       - False
@@ -83,7 +90,7 @@ parameters:
     values:
       - relu
       - leaky_relu
-  include_second_fc_layer:
+  fc_dropout_p:
     values:
-      - True
-      - False
+      - 0
+      - 0.5

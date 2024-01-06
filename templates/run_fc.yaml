@@ -1,14 +1,14 @@
-project: pytorch-demo
+project: pytorch-template
 tags:
-  - default
+  - template
 notes: default configuration for a fully connected network
 architecture: FC
 # experiment parameters
-epochs: 40
-batch_size: 64
+epochs: 100
 optimizer: adam
-learning_rate: 0.005
-num_reduce_learning_rate: 3  # we decrease the learning rate 5 times
+learning_rate: 0.01
+batch_size: 32
+num_reduce_learning_rate: 5  # we decrease the learning rate 5 times
 # model parameters
 hidden_layers:
   - 500

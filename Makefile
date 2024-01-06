@@ -47,29 +47,29 @@ open_coverage:
 	open 'htmlcov/index.html'
 
 # default / example runs
-run_default_fc:
-	python source/entrypoints/cli.py run -config_file=source/entrypoints/default_run_fc.yaml
+run_fc_default:
+	python cli.py run -config_file=templates/run_fc.yaml
 
-run_default_cnn:
+run_cnn_default:
 	python source/entrypoints/cli.py run -config_file=source/entrypoints/default_run_cnn.yaml
 
 # default / example sweeps
-sweep_default_fc:
-	python source/entrypoints/cli.py sweep \
+sweep_fc_default:
+	python cli.py sweep \
 		-config_file=source/entrypoints/default_sweep_fc.yaml
 		# using grid search via config setting
 		# -runs=70
 
-sweep_default_cnn:
+sweep_cnn_default:
 	python source/entrypoints/cli.py sweep \
 		-config_file=source/entrypoints/default_sweep_cnn.yaml \
 		-runs=70
 
-num_combinations_default_cnn:
+num_combinations_cnn_default:
 	python source/entrypoints/cli.py num-combinations \
 		-config_file=source/entrypoints/default_sweep_cnn.yaml
 
-num_combinations_default_fc:
+num_combinations_fc_default:
 	python source/entrypoints/cli.py num-combinations \
 		-config_file=source/entrypoints/default_sweep_fc.yaml
 

@@ -1,14 +1,14 @@
-project: pytorch-demo
+project: pytorch-template
 tags:
-  - default
+  - template
 notes: default configuration for a convolutional neural network
 architecture: CNN
 # experiment parameters
-epochs: 40
-batch_size: 64
+epochs: 100
 optimizer: adam
 learning_rate: 0.01
-num_reduce_learning_rate: 3  # we decrease the learning rate 5 times
+batch_size: 32
+num_reduce_learning_rate: 5  # we decrease the learning rate 5 times
 # model parameters
 out_channels:
   - 16
@@ -18,6 +18,6 @@ kernel_sizes:
   - 5
 use_batch_norm: True
 conv_dropout_p: 0  # lower value e.g. 0.1
-fc_dropout_p: 0.5
-activation_type: relu  # e.g. relu, leaky_relu 
 include_second_fc_layer: True
+activation_type: relu  # e.g. relu, leaky_relu 
+fc_dropout_p: 0.5
