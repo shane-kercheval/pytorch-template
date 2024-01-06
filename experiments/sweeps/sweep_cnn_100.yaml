@@ -1,4 +1,4 @@
-project: pytorch-demo-v2
+project: pytorch-demo
 notes: changed to tune out_channels and kernel_sizes
 method: random
 # method: grid
