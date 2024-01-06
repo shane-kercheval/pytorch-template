@@ -110,30 +110,45 @@ class ConvNet2L(nn.Module):
     def __init__(
             self,
             dimensions: tuple[int, int],
-            l1_out_channels: int,
-            l2_out_channels: int,
-            l1_kernel_size: int,
-            l2_kernel_size: int,
-            classes: int):
+            output_size: int,
+            out_channels: tuple[int, int],
+            kernel_sizes: tuple[int, int],
+            input_channels: int = 1,  # New parameter for input channels
+            use_batch_norm: bool = False,
+            conv_dropout_p: float | None = None,  # Dropout probability
+            fc_dropout_p: float | None = None,  # Dropout probability
+            activation_type: str = 'relu',  # Type of activation function
+            include_second_fc_layer: bool = False,  # Whether to include a second FC layer
+            ):
         super().__init__()
+        l1_out_channels, l2_out_channels = out_channels
+        l1_kernel_size, l2_kernel_size = kernel_sizes
         stride = 1
         pool_kernel_size = 2
         pool_stride = 2
-
         padding_1 = calculate_same_padding(l1_kernel_size, stride=stride)
         padding_2 = calculate_same_padding(l2_kernel_size, stride=stride)
-        self.layer1 = nn.Sequential(
+
+        # build layer 1
+        layers = [
             nn.Conv2d(
-                in_channels=1,
+                in_channels=input_channels,
                 out_channels=l1_out_channels,
                 kernel_size=l1_kernel_size,
                 stride=stride,
                 padding=padding_1,
             ),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
-        )
-        self.layer2 = nn.Sequential(
+        ]
+        if use_batch_norm:
+            layers.append(nn.BatchNorm2d(l1_out_channels))
+        layers.append(self._get_activation(activation_type))
+        layers.append(nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride))
+        if conv_dropout_p:
+            layers.append(nn.Dropout2d(p=conv_dropout_p))
+        self.layer1 = nn.Sequential(*layers)
+
+        # build layer 2
+        layers = [
             nn.Conv2d(
                 in_channels=l1_out_channels,
                 out_channels=l2_out_channels,
@@ -141,23 +156,50 @@ class ConvNet2L(nn.Module):
                 stride=stride,
                 padding=padding_2,
             ),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
-        )
-        self.flatten = nn.Flatten()
-        self.fc = nn.Linear(self._get_linear_input_size(dimensions), classes)
+        ]
+        if use_batch_norm:
+            layers.append(nn.BatchNorm2d(l2_out_channels))
+        layers.append(self._get_activation(activation_type))
+        layers.append(nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride))
+        if conv_dropout_p:
+            layers.append(nn.Dropout2d(p=conv_dropout_p))
+        self.layer2 = nn.Sequential(*layers)
 
-    def _get_linear_input_size(self, dimensions: tuple[int, int]) -> int:
-        dummy_input = torch.zeros(1, 1, dimensions[0], dimensions[1])
+        fc_input_size = self._get_linear_input_size(dimensions, input_channels)
+        # Build the fully connected layers
+        fc_layers = []
+        fc_layers.append(nn.Flatten())
+        if include_second_fc_layer:
+            second_fc_size = fc_input_size // 2
+            fc_layers.extend([
+                nn.Linear(fc_input_size, second_fc_size),
+                self._get_activation(activation_type),
+            ])
+            if fc_dropout_p:
+                fc_layers.append(nn.Dropout(p=fc_dropout_p))
+            fc_layers.append(nn.Linear(second_fc_size, output_size))
+        else:
+            fc_layers.append(nn.Linear(fc_input_size, output_size))
+        self.fc = nn.Sequential(*fc_layers)
+
+    def _get_linear_input_size(self, dimensions: tuple[int, int], input_channels: int) -> int:
+        """Calculate the input size of the linear layer."""
+        dummy_input = torch.zeros(1, input_channels, dimensions[0], dimensions[1])
         with torch.no_grad():
             dummy_output = self.layer1(dummy_input)
             dummy_output = self.layer2(dummy_output)
-            dummy_output = self.flatten(dummy_output)
-        return dummy_output.size(1)
+        return nn.Flatten()(dummy_output).size(1)
+
+    @staticmethod
+    def _get_activation(activation_type: str) -> nn.Module:
+        if activation_type == 'leaky_relu':
+            return nn.LeakyReLU()
+        if activation_type == 'relu':
+            return nn.ReLU()
+        raise ValueError(f'Unknown activation type: {activation_type}')
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass."""
         out = self.layer1(x)
         out = self.layer2(out)
-        out = self.flatten(out)
         return self.fc(out)

@@ -1,5 +1,6 @@
 """Helper functions for running experiments and logging to Weights and Biases)."""
 
+import inspect
 import logging
 import math
 import pprint
@@ -15,17 +16,17 @@ from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 
-from source.domain.architectures import FullyConnectedNN, ConvNet2L
-from source.domain.pytorch_helpers import EarlyStopping, calculate_average_loss
+from source.library.architectures import FullyConnectedNN, ConvNet2L
+from source.library.pytorch_helpers import EarlyStopping, calculate_average_loss
 
 
-def get_device() -> str:
+def get_available_device() -> str:
     """Returns the device based on the system configuration."""
     if torch.cuda.is_available():
-        return torch.device('cuda')
+        return torch.device('cuda').type
     if torch.backends.mps.is_available():
-        return torch.device('mps')  # https://pytorch.org/docs/stable/notes/mps.html
-    return torch.device('cpu')
+        return torch.device('mps').type  # https://pytorch.org/docs/stable/notes/mps.html
+    return torch.device('cpu').type
 
 
 def get_data(architecture: str):  # noqa
@@ -82,17 +83,9 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
         config = wandb.config
         pprint.pprint(config)
         x_train, x_val, x_test, y_train, y_val, y_test = get_data(architecture=config.architecture)
-        device = config.device if 'device' in config else None
         train_loader = make_loader(x_train, y_train, batch_size=config.batch_size)
         validation_loader = make_loader(x_val, y_val, batch_size=config.batch_size)
-        model = make_model(
-            architecture=config.architecture,
-            input_size=28*28,
-            layers=config.layers if 'layers' in config else None,
-            out_channels=config.out_channels if 'out_channels' in config else None,
-            kernel_sizes=config.kernel_sizes if 'kernel_sizes' in config else None,
-            device=device,
-        )
+        model = make_model(input_size=28*28, output_size=10, config=config)
         criterion = nn.CrossEntropyLoss()
         optimizer_creator = make_optimizer(optimizer=config.optimizer, model=model)
         train(
@@ -103,7 +96,10 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
             optimizer_creator=optimizer_creator,
             epochs=config.epochs,
             learning_rate=config.learning_rate,
-            device=device,
+            device=config.device,
+            early_stopping_patience=config.early_stopping_patience,
+            early_stopping_delta=config.early_stopping_delta,
+            early_stopping_delta_type=config.early_stopping_delta_type,
             num_reduce_learning_rate=config.num_reduce_learning_rate,
         )
         evaluate(
@@ -113,7 +109,7 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
             x_test=x_test,
             y_test=y_test,
             criterion=criterion,
-            device=device,
+            device=config.device,
         )
     return model
 
@@ -129,36 +125,30 @@ def make_loader(x: torch.tensor, y: torch.tensor, batch_size: int) -> DataLoader
     )
 
 
-def make_model(
-        architecture: str,
-        input_size: int,
-        layers: list[int],
-        out_channels: list[int, int],
-        kernel_sizes: list[int, int],
-        device: str) -> nn.Module:
+def _get_parameters(func: callable) -> list:
+    """Get the list of parameters of a function."""
+    return [k for k in inspect.signature(func).parameters if k != 'self']
+
+
+def make_model(input_size: int, output_size: int, config: dict) -> nn.Module:
     """Make a model based on the architecture."""
+    architecture = config['architecture']
+    device = config['device']
     assert architecture in ['FC', 'CNN'], f"Unknown model type: {architecture}"
     assert device
     if architecture == 'FC':
-        assert input_size, "Input size must be provided for FC."
-        assert layers, "Layers must be provided for fully connected network."
+        model_parameters = _get_parameters(FullyConnectedNN.__init__)
         model = FullyConnectedNN(
             input_size=input_size,
-            hidden_layers=layers,
-            output_size=10,
+            output_size=output_size,
+            **{k: v for k, v in config.items() if k in model_parameters},
         )
     elif architecture == 'CNN':
-        assert input_size, "Input size must be provided for a CNN."
-        assert out_channels, "Number of Filters/Channels must be provided for a CNN."
-        assert kernel_sizes, "Kernel sizes must be provided for a CNN."
         dimension = int(math.sqrt(input_size))
         model = ConvNet2L(
             dimensions=(dimension, dimension),
-            l1_out_channels=out_channels[0],
-            l2_out_channels=out_channels[1],
-            l1_kernel_size=kernel_sizes[0],
-            l2_kernel_size=kernel_sizes[1],
-            classes=10,
+            output_size=output_size,
+            **{k: v for k, v in config.items() if k in _get_parameters(ConvNet2L.__init__)},
         )
     else:
         raise ValueError(f"Unknown model type: {architecture}")
@@ -189,7 +179,10 @@ def train(  # noqa: PLR0915
         epochs: int,
         learning_rate: float,
         device: str,
-        num_reduce_learning_rate: int,
+        early_stopping_patience: int = 3,
+        early_stopping_delta: float = 0.05,
+        early_stopping_delta_type: str = 'relative',
+        num_reduce_learning_rate: int = 5,
         log_wandb: bool = True,
         ) -> None:
     """
@@ -217,9 +210,9 @@ def train(  # noqa: PLR0915
 
     early_stopping = EarlyStopping(
         model=model,
-        patience=3,
-        delta=0.05,  # new loss is required to be >%5 better than previous best
-        delta_type='relative',
+        patience=early_stopping_patience,
+        delta=early_stopping_delta,
+        delta_type=early_stopping_delta_type,
         verbose=True,
     )
     stop_count = 0

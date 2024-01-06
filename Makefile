@@ -32,8 +32,8 @@ docker_all:
 # Project
 ####
 linting:
-	ruff source/domain
-	ruff source/entrypoints
+	ruff source/library
+	ruff cli.py
 	ruff tests
 
 tests: linting
@@ -47,41 +47,62 @@ open_coverage:
 	open 'htmlcov/index.html'
 
 
-run_fc_1:
-	python source/entrypoints/cli.py run \
-		-config_file=source/entrypoints/run_fc_1.yaml \
-		-device=cuda
+# template / default runs
+run_fc_default:
+	python cli.py run -config_file=templates/run_fc.yaml
 
-run_cnn_1:
-	python source/entrypoints/cli.py run \
-		-config_file=source/entrypoints/run_cnn_1.yaml \
-		-device=cuda
+run_cnn_default:
+	python cli.py run -config_file=templates/run_cnn.yaml
 
-sweep_fc_1_bayes:
-	python source/entrypoints/cli.py sweep \
-		-config_file=source/entrypoints/sweep_fc_1_bayes.yaml \
-		-device=cpu \
-		-count=70
 
-sweep_cnn_2_bayes:
-	python source/entrypoints/cli.py sweep \
-		-config_file=source/entrypoints/sweep_cnn_2_bayes.yaml \
-		-device=cuda \
-		-count=70
+# sweep fc
+sweep_fc:
+	# run the latest config file
+	python cli.py sweep \
+		-config_file=$$(ls experiments/sweeps/sweep_fc_*.yaml | sort -V | tail -n 1)
+		# using grid search via config setting
+		# -runs=70 \
 
-sweep_cnn_3:
-	python source/entrypoints/cli.py sweep \
-		-config_file=source/entrypoints/sweep_cnn_3.yaml \
-		-device=cuda \
-		-count=90
+# sweep cnn
+sweep_cnn:
+	python cli.py sweep \
+		-config_file=$$(ls experiments/sweeps/sweep_cnn_*.yaml | sort -V | tail -n 1) \
+		-runs=70
 
-num_combinations:
-	python source/entrypoints/cli.py num-combinations \
-		-config_file=source/entrypoints/sweep_cnn_3.yaml
 
-pytorch_fully:
-	jupyter nbconvert --execute --to html source/notebooks/pytorch_fully_connected.ipynb
-	mv source/notebooks/pytorch_fully_connected.html output/pytorch_fully_connected.html
+# run fc
+run_fc:
+	python cli.py run \
+		-config_file=$$(ls experiments/runs/run_fc_*.yaml | sort -V | tail -n 1)
+
+# run cnn
+run_cnn:
+	python cli.py run \
+		-config_file=$$(ls experiments/runs/run_cnn_*.yaml | sort -V | tail -n 1)
+
+
+# number of combinations in default sweep configs
+num_combinations_fc_default:
+	python cli.py num-combinations \
+		-config_file=source/entrypoints/default_sweep_fc.yaml
+
+num_combinations_cnn_default:
+	python cli.py num-combinations \
+		-config_file=source/entrypoints/default_sweep_cnn.yaml
+
+
+# number of combinations in latest sweep configs
+num_combinations_fc:
+	python cli.py num-combinations \
+		-config_file=$$(ls experiments/sweeps/sweep_fc_*.yaml | sort -V | tail -n 1)
+
+num_combinations_cnn:
+	python cli.py num-combinations \
+		-config_file=$$(ls experiments/sweeps/sweep_cnn_*.yaml | sort -V | tail -n 1)
+
+# pytorch_fully:
+# 	jupyter nbconvert --execute --to html source/notebooks/pytorch_fully_connected.ipynb
+# 	mv source/notebooks/pytorch_fully_connected.html output/pytorch_fully_connected.html
 
 remove_logs:
 	rm -f output/log.log

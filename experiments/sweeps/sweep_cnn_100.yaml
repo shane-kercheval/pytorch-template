@@ -1,0 +1,100 @@
+project: pytorch-demo
+notes: changed to tune out_channels and kernel_sizes
+method: random
+# method: grid
+# method: bayes
+metric:
+  # set this to `validation_loss` if using `bayes` method above
+  # setting this to test_loss so that w&b will use that to generate the parallel coordinates
+  # best_validation_loss is the loss from the best early stopping epoch
+  name: best_validation_loss
+  goal: minimize
+parameters:
+  ####
+  # configuration parameters (fixed; via `value`)
+  ####
+  # tags:
+  #   value:
+  #     - pytorch
+  #     - demo
+  epochs:
+    value: 100
+  architecture:
+    value: CNN
+  early_stopping_patience:
+    value: 3  # early stopping is triggered after 3 epochs without improvement
+  early_stopping_delta:
+    value: 0.05  # required improvement of 5%
+  early_stopping_delta_type:
+    value: relative
+  num_reduce_learning_rate:
+    value: 5  # we decrease the learning rate 5 times when early stopping is triggered
+  optimizer:
+    value: sgd
+  ####
+  # hyperparameters (tuned; via e.g `values` or `distribution`)
+  ####
+  # optimizer:
+  #   values:
+  #     - adam
+  #     - sgd
+  out_channels:
+    values:
+      - - 8
+        - 16
+      - - 16
+        - 32
+      - - 32
+        - 64
+      - - 16
+        - 64
+  kernel_sizes:
+    values:
+      - - 3
+        - 3
+      - - 5
+        - 5
+      - - 7
+        - 7
+      - - 3
+        - 5
+      - - 3
+        - 7
+  batch_size:
+    values:
+      - 32
+      - 64
+      - 128
+      # - 256
+  # batch_size:
+  #   # integers between 32 and 256 with evenly-distributed logarithms
+  #   distribution: q_log_uniform_values
+  #   q: 8
+  #   min: 32
+  #   max: 256
+  learning_rate:
+    values:
+      - 0.01
+      - 0.005
+      - 0.001
+  conv_dropout_p:
+    values:
+      - 0
+      - 0.1
+      - 0.2
+  fc_dropout_p:
+    values:
+      - 0
+      - 0.5
+  use_batch_norm:
+    values:
+      - True
+      - False
+  activation_type:
+    values:
+      - relu
+      - leaky_relu
+  include_second_fc_layer:
+    values:
+      - True
+      - False

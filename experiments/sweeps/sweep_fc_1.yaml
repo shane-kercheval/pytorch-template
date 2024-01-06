@@ -1,45 +1,40 @@
-project: pytorch-demo-v2
-# method: grid
+project: pytorch-template
+method: grid
 # method: random
-method: bayes
+# method: bayes
 metric:
-  # set this to `validation_loss` if using `bayes` method above
-  # setting this to test_loss so that w&b will use that to generate the parallel coordinates
-  # best_validation_loss is the loss from the best early stopping epoch
-  name: best_validation_loss
   goal: minimize
+  # setting this to test_loss so that w&b will use that to generate the parallel coordinates
+  name: test_loss
+  # name: best_validation_loss  # if `bayes`
+  # set `name` to use validation loss (i.e. `best_validation_loss`) if using `bayes` method above;
+  # best_validation_loss is the loss from the best early stopping epoch
+  # we don't want bayes to make decisions based on the test data/loss
 parameters:
   ####
   # configuration parameters (fixed; via `value`)
   ####
-  # project:
-  #   value: project_name
-  tags:
-    value:
-      - pytorch
-      - demo
-  notes:
-    value: Notes
-  epochs:
-    value: 40
   architecture:
     value: FC
+  epochs:
+    value: 100
   num_reduce_learning_rate:
     value: 5  # we decrease the learning rate 5 times
+  # optimizer:
+  #   value: sgd
   ####
   # hyperparameters (tuned; via e.g `values` or `distribution`)
   ####
+  # experiment parameters
   optimizer:
     values:
       - adam
       - sgd
-  layers:
+  learning_rate:
     values:
-      - - 500
-        - 100
-      - - 200
-        - 100
-      - - 100
+      - 0.01
+      - 0.005
+      - 0.001
   batch_size:
     values:
       - 32
@@ -52,11 +47,14 @@ parameters:
   #   q: 8
   #   min: 32
   #   max: 256
-  learning_rate:
+  # model parameters
+  hidden_layers:
     values:
-      - 0.01
-      - 0.005
-      - 0.001
+      - - 500
+        - 100
+      - - 200
+        - 100
+      - - 100
   # dropout:
   #   values:
   #     - 0.3

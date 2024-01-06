@@ -6,8 +6,8 @@ from torch import nn
 from torch import optim
 import numpy as np
 
-from source.domain.pytorch_helpers import EarlyStopping, PyTorchTrainer
-from source.domain.architectures import FullyConnectedNN
+from source.library.pytorch_helpers import EarlyStopping, PyTorchTrainer
+from source.library.architectures import FullyConnectedNN
 from tests.helpers import get_test_file_path
 
 
@@ -291,7 +291,6 @@ def test_early_stopping_delta_relative_5():  # noqa
     # past the point where we should have stopped
     with pytest.raises(AssertionError):
         early_stopping(loss=current_lowest_loss - 1)
-
 
 
 def test_early_stopping_with_reset():  # noqa

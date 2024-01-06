@@ -1,0 +1,26 @@
+project: pytorch-template
+tags:
+  - template
+notes: default configuration for a convolutional neural network
+architecture: CNN
+# experiment parameters
+epochs: 100
+optimizer: adam
+learning_rate: 0.01
+batch_size: 32
+early_stopping_patience: 3  # early stopping is triggered after 3 epochs without improvement
+early_stopping_delta: 0.05  # required improvement of 5%
+early_stopping_delta_type: relative
+num_reduce_learning_rate: 5  # we decrease the learning rate 5 times when early stopping is triggered
+# model parameters
+out_channels:
+  - 16
+  - 32
+kernel_sizes:
+  - 3
+  - 5
+use_batch_norm: True
+conv_dropout_p: 0  # lower value e.g. 0.1
+include_second_fc_layer: True
+activation_type: relu  # e.g. relu, leaky_relu 
+fc_dropout_p: 0.5

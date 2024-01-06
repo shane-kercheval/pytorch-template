@@ -1,0 +1,18 @@
+project: pytorch-demo
+tags:
+  - default
+notes: default configuration for a fully connected network
+architecture: FC
+# experiment parameters
+epochs: 100
+optimizer: adam
+learning_rate: 0.01
+batch_size: 32
+early_stopping_patience: 3  # early stopping is triggered after 3 epochs without improvement
+early_stopping_delta: 0.05  # required improvement of 5%
+early_stopping_delta_type: relative
+num_reduce_learning_rate: 5  # we decrease the learning rate 5 times when early stopping is triggered
+# model parameters
+hidden_layers:
+  - 500
+  - 100
