@@ -92,6 +92,9 @@ parameters:
     values:
       - True
       - False
+  # activation_type and fc_dropout_p only apply if include_second_fc_layer is True
+  # so when evaluating influence of activation_type and fc_dropout_p, we should only
+  # consider the runs where include_second_fc_layer is True
   activation_type:
     values:
       - relu
