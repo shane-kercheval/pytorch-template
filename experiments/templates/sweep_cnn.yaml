@@ -21,8 +21,14 @@ parameters:
     value: CNN
   epochs:
     value: 100
+  early_stopping_patience:
+    value: 3  # early stopping is triggered after 3 epochs without improvement
+  early_stopping_delta:
+    value: 0.05  # required improvement of 5%
+  early_stopping_delta_type:
+    value: relative
   num_reduce_learning_rate:
-    value: 5  # we decrease the learning rate 5 times
+    value: 5  # we decrease the learning rate 5 times when early stopping is triggered
   # optimizer:
   #   value: sgd
   ####

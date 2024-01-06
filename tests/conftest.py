@@ -7,6 +7,8 @@ import os
 
 import logging.config
 
+import yaml
+
 from source.library.experiment import get_data
 
 logging.config.fileConfig(
@@ -33,3 +35,19 @@ def mnist_fc():  # noqa
 @pytest.fixture(scope='session')
 def mnist_cnn():  # noqa
     return get_data(architecture='CNN')
+
+
+@pytest.fixture(scope='session')
+def default_fc_run_config() -> dict:
+    """Return the default run configuration for a fully-connected NN."""
+    file_path = 'experiments/templates/run_fc.yaml'
+    with open(file_path) as f:
+        return yaml.safe_load(f)
+
+
+@pytest.fixture(scope='session')
+def default_cnn_run_config() -> dict:
+    """Return the default run configuration for a Convolutional NN."""
+    file_path = 'experiments/templates/run_cnn.yaml'
+    with open(file_path) as f:
+        return yaml.safe_load(f)

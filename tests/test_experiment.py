@@ -192,3 +192,30 @@ def test__train__cnn(mnist_cnn):  # noqa
         device=device,
         log_wandb=False,
     )
+
+
+def test__make_model__fc__default_config(default_fc_run_config, mnist_fc):  # noqa
+    device = get_available_device()
+    x_train, _, _, _, _, _ = mnist_fc
+    default_fc_run_config['device'] = device
+    model = make_model(
+        input_size=28*28,
+        output_size=10,
+        config=default_fc_run_config,
+    )
+    # test forward pass
+    out = model.forward(x_train[0:100].to(device))
+    assert list(out.shape) == [100, 10]
+
+def test__make_model__cnn__default_config(default_cnn_run_config, mnist_cnn):  # noqa
+    device = get_available_device()
+    x_train, _, _, _, _, _ = mnist_cnn
+    default_cnn_run_config['device'] = device
+    model = make_model(
+        input_size=28*28,
+        output_size=10,
+        config=default_cnn_run_config,
+    )
+    # test forward pass
+    out = model.forward(x_train[0:100].to(device))
+    assert list(out.shape) == [100, 10]

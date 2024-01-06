@@ -8,7 +8,7 @@ import logging.config
 import logging
 import os
 import click
-from source.domain.experiment import model_pipeline, get_available_device
+from source.library.experiment import model_pipeline, get_available_device
 
 from dotenv import load_dotenv
 load_dotenv()  # EXPECTS WANDB_API_KEY TO BE SET IN .env FILE
