@@ -96,5 +96,6 @@ def num_combinations(config_file: str) -> None:
 def _num_combinations(config: dict) -> int:
     return np.cumprod([len(v['values']) for v in config['parameters'].values() if 'values' in v])[-1]  # noqa
 
+
 if __name__ == '__main__':
     main()
