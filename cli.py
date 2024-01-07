@@ -174,6 +174,8 @@ def predict(
         k: v['value'] for k, v in model_config.items()
         if isinstance(v, dict) and 'value' in v
     }
+    device = get_available_device()
+    model_config['device'] = device
     model = make_model(
         data_dimensions=DIMENSIONS,
         in_channels=CHANNELS,
@@ -191,7 +193,6 @@ def predict(
     )
     assert len(x) == len(y)
     # predict
-    device = get_available_device()
     predictions = pred(model=model, x=x, device=device, probs=False).cpu()
     # save predictions
     pd.DataFrame(predictions).to_parquet(predictions_path)

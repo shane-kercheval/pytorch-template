@@ -15,8 +15,7 @@ In order to use this template you need to sign up for an account in [Weights and
 
 # Branches
 
-- `mnst-snapshot` contains an example of training a fully-connected and convolutional neural network on the mnist dataset (1 channel; gray)
-- `smile-snapshot`: 
+- `conv-1-channel-mnist-snaphot`: contains an example of training a convolutional neural net with two layers on the mnist dataset (1 channel - grayscale)
 
 # Example - Running CNN Random Search
 
