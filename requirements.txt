@@ -16,5 +16,6 @@ python-dotenv
 PyYAML
 ruff
 scikit-learn
+statsmodels
 tqdm
 wandb
