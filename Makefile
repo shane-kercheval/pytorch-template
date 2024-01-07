@@ -103,7 +103,7 @@ num_combinations_cnn:
 
 predict:
 	python cli.py predict \
-		-w_and_b_run_id=23823un2 \
+		-w_and_b_run_path=shane-kercheval/pytorch-demo/926zux1z \
 		-x_parquet_path=data/external/x_test.parquet \
 		-predictions_path=data/processed/predictions.parquet \
 		-y_parquet_path=data/external/y_test.parquet

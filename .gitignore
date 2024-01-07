@@ -138,3 +138,5 @@ MNIST/*
 wandb/
 model.onnx
 *.parquet
+config.yaml
+model_state.pth

@@ -128,17 +128,13 @@ def _num_combinations(config: dict) -> int:
 @main.command()
 @click.option('-x_parquet_path', type=str)
 @click.option('-predictions_path', type=str)
-@click.option('-w_and_b_run_id', type=str)
-@click.option('-w_and_b_user', type=str, default='shane-kercheval')
-@click.option('-w_and_b_project', type=str, default='pytorch-demo')
+@click.option('-w_and_b_run_path', type=str)
 @click.option('-w_and_b_model_name', type=str, default='model_state.pth')
 @click.option('-y_parquet_path', type=str, default=None)
 def predict(
         x_parquet_path: str,
         predictions_path: str,
-        w_and_b_run_id: str,
-        w_and_b_user: str = 'shane-kercheval',
-        w_and_b_project: str = 'pytorch-demo',
+        w_and_b_run_path: str,
         w_and_b_model_name: str = 'model_state.pth',
         y_parquet_path: str | None = None) -> None:
     """
@@ -152,21 +148,22 @@ def predict(
             Path to parquet file containing x data.
         predictions_path:
             Path to parquet file where predictions will be saved.
-        w_and_b_run_id:
-            Weights and Biases run id. Model state is assumed to be `model_state.pt`.
-        w_and_b_user:
-            Weights and Biases user name.
-        w_and_b_project:
-            Weights and Biases project name.
+        w_and_b_run_path:
+            Weights and Biases run path (user_id/project/run_id).
+            Model state is assumed to be `model_state.pt`.
         w_and_b_model_name:
             Name of model state file.
         y_parquet_path:
             Path to parquet file containing y data. If provided, accuracy will be printed.
             If None, will not be used.
     """
-    logging.info(f"Loading model from run {w_and_b_run_id}.")
-    run_path = f'{w_and_b_user}/{w_and_b_project}/{w_and_b_run_id}'
-    model_config = wandb.restore('config.yaml',run_path=run_path)
+    # delete config.yaml and model_state.pth if they exist
+    if os.path.exists('config.yaml'):
+        os.remove('config.yaml')
+    if os.path.exists('model_state.pth'):
+        os.remove('model_state.pth')
+    logging.info(f"Loading model from run `{w_and_b_run_path}`.")
+    model_config = wandb.restore('config.yaml',run_path=w_and_b_run_path)
     with open(model_config.name) as f:
         model_config = yaml.safe_load(f)
     model_config = {
@@ -182,7 +179,7 @@ def predict(
         output_size=OUTPUT_SIZE,
         config=model_config,
     )
-    model_state = torch.load(wandb.restore(w_and_b_model_name, run_path=run_path).name)
+    model_state = torch.load(wandb.restore(w_and_b_model_name, run_path=w_and_b_run_path).name)
     model.load_state_dict(model_state)
     # load data
     x = pd.read_parquet(x_parquet_path)
