@@ -67,7 +67,7 @@ sweep_fc:
 sweep_cnn:
 	python cli.py sweep \
 		-config_file=$$(ls experiments/sweeps/sweep_cnn_*.yaml | sort -V | tail -n 1) \
-		-runs=70
+		-runs=100
 
 
 # run fc
@@ -99,6 +99,18 @@ num_combinations_fc:
 num_combinations_cnn:
 	python cli.py num-combinations \
 		-config_file=$$(ls experiments/sweeps/sweep_cnn_*.yaml | sort -V | tail -n 1)
+
+
+predict:
+	python cli.py predict \
+		-w_and_b_run_id=31o7uo3m \
+		-x_parquet_path=data/external/x_test.parquet \
+		-predictions_path=data/processed/predictions.parquet \
+		-y_parquet_path=data/external/y_test.parquet
+
+
+test_data:
+	python cli.py test-data
 
 # pytorch_fully:
 # 	jupyter nbconvert --execute --to html source/notebooks/pytorch_fully_connected.ipynb

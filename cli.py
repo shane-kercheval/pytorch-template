@@ -2,18 +2,26 @@
 
 import pprint
 import numpy as np
+import pandas as pd
+from sklearn.datasets import fetch_openml
+from sklearn.model_selection import train_test_split
+import torch
 import wandb
 import yaml
 import logging.config
 import logging
 import os
 import click
-from source.library.experiment import model_pipeline, get_available_device
-
+from source.library.experiment import (
+    make_model,
+    model_pipeline,
+    get_available_device,
+    transform_data,
+    predict as pred,
+)
 from dotenv import load_dotenv
+
 load_dotenv()  # EXPECTS WANDB_API_KEY TO BE SET IN .env FILE
-
-
 logging.config.fileConfig(
     os.path.join(os.getcwd(), '/code/source/config/logging.conf'),
     disable_existing_loggers=False,
@@ -95,6 +103,88 @@ def num_combinations(config_file: str) -> None:
 
 def _num_combinations(config: dict) -> int:
     return np.cumprod([len(v['values']) for v in config['parameters'].values() if 'values' in v])[-1]  # noqa
+
+
+@main.command()
+@click.option('-x_parquet_path', type=str)
+@click.option('-predictions_path', type=str)
+@click.option('-w_and_b_run_id', type=str)
+@click.option('-w_and_b_user', type=str, default='shane-kercheval')
+@click.option('-w_and_b_project', type=str, default='pytorch-demo')
+@click.option('-w_and_b_model_name', type=str, default='model_state.pth')
+@click.option('-y_parquet_path', type=str, default=None)
+def predict(
+        x_parquet_path: str,
+        predictions_path: str,
+        w_and_b_run_id: str,
+        w_and_b_user: str = 'shane-kercheval',
+        w_and_b_project: str = 'pytorch-demo',
+        w_and_b_model_name: str = 'model_state.pth',
+        y_parquet_path: str | None = None) -> None:
+    """
+    Predict on a dataset loaded from parquet file. Uses the model state and config from a
+    particular project/run.
+
+    Args:
+        x_parquet_path:
+            Path to parquet file containing x data.
+        predictions_path:
+            Path to parquet file where predictions will be saved.
+        arch:
+            Architecture to use for prediction. Must be one of ['fc', 'cnn'].
+        w_and_b_run_id:
+            Weights and Biases run id. Model state is assumed to be `model_state.pt`.
+        w_and_b_user:
+            Weights and Biases user name.
+        w_and_b_project:
+            Weights and Biases project name.
+        w_and_b_model_name:
+            Name of model state file.
+        y_parquet_path:
+            Path to parquet file containing y data. If provided, accuracy will be printed.
+            If None, will not be used.
+    """
+    logging.info(f"Loading model from run {w_and_b_run_id}.")
+    run_path = f'{w_and_b_user}/{w_and_b_project}/{w_and_b_run_id}'
+    model_state = torch.load(wandb.restore(w_and_b_model_name, run_path=run_path).name)
+    model_config = wandb.restore('config.yaml',run_path=run_path)
+    with open(model_config.name) as f:
+        model_config = yaml.safe_load(f)
+    # model config is stored in a different format in wandb than in the config file
+    model_config = {
+        k: v['value'] for k, v in model_config.items()
+        if isinstance(v, dict) and 'value' in v
+    }
+    model = make_model(input_size=28*28, output_size=10, config=model_config)
+    model.load_state_dict(model_state)
+    # load data
+    x = pd.read_parquet(x_parquet_path)
+    y = pd.read_parquet(y_parquet_path).iloc[:, 0] if y_parquet_path is not None else None
+    x, y = transform_data(x=x, y=y, architecture=model_config['architecture'])
+    assert len(x) == len(y)
+    # predict
+    device = get_available_device()
+    predictions = pred(model=model, x=x, device=device, probs=False).cpu()
+    # save predictions
+    pd.DataFrame(predictions).to_parquet(predictions_path)
+    if y is not None:
+        print(f"Accuracy: {(predictions.numpy() == y.numpy()).mean():.2%}")
+
+
+####
+# functions used for testing
+####
+@main.command()
+def test_data() -> None:
+    """Function used to create a test dataset used to mimic predicting on a new dataset."""
+    x, y = fetch_openml('mnist_784', version=1, return_X_y=True, parser='auto')
+    _, x_test, _, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+    x_test, _, y_test, _ = train_test_split(x_test, y_test, test_size=0.5, random_state=42)
+    # save x_test as parquet
+    assert len(x) == len(y)
+    pd.DataFrame(x_test).to_parquet('data/external/x_test.parquet')
+    # save y_test as parquet
+    pd.DataFrame(y_test).to_parquet('data/external/y_test.parquet')
 
 
 if __name__ == '__main__':

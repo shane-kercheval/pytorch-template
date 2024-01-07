@@ -1,5 +1,6 @@
 click
 coverage
+fastparquet
 helpsk
 jupyter-contrib-nbextensions
 notebook
@@ -8,6 +9,7 @@ onnx
 pandas
 plotly
 plotly-express
+pyarrow
 pytest
 python-dateutil
 python-dotenv

@@ -136,3 +136,4 @@ data/raw/*
 MNIST/*
 wandb/
 model.onnx
+*.parquet

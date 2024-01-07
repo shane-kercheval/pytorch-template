@@ -1,9 +1,10 @@
 """Helper functions for running experiments and logging to Weights and Biases)."""
 
-import inspect
 import logging
 import math
+import os
 import pprint
+import pandas as pd
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -16,7 +17,7 @@ from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 
-from source.library.architectures import FullyConnectedNN, ConvNet2L
+from source.library.architectures import FullyConnectedNN, ConvNet2L, get_model_parameters
 from source.library.pytorch_helpers import EarlyStopping, calculate_average_loss
 
 
@@ -31,17 +32,9 @@ def get_available_device() -> str:
 
 def get_data(architecture: str):  # noqa
     """Function is required by and called from `model_pipeline()`."""
-    assert architecture in ['FC', 'CNN'], f"Architecture {architecture} not supported."
+    assert architecture.lower() in ['fc', 'cnn'], f"Architecture {architecture} not supported."
     x, y = fetch_openml('mnist_784', version=1, return_X_y=True, parser='auto')
-    x = torch.tensor(x.values, dtype=torch.float32)
-    x = transform_data(x)
-    y = torch.tensor(y.astype(int).values, dtype=torch.long)
-
-    if architecture == 'CNN':
-        # Reshape data to have channel dimension
-        # MNIST images are 28x28, so we reshape them to [batch_size, 1, 28, 28]
-        x = x.reshape(-1, 1, 28, 28)
-
+    x, y = transform_data(architecture=architecture, x=x, y=y)
     # 80% train; 10% validation; 10% test
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
     x_test, x_val, y_test, y_val = train_test_split(x_test, y_test, test_size=0.5, random_state=42)
@@ -51,15 +44,33 @@ def get_data(architecture: str):  # noqa
     return x_train, x_val, x_test, y_train, y_val, y_test
 
 
-def transform_data(x: torch.tensor) -> torch.tensor:
-    """Transforms the data (e.g. normalizes generic x data from 0 to 1)."""
+def transform_data(
+        architecture: str,
+        x: pd.DataFrame,
+        y: pd.Series | None = None) -> tuple[torch.tensor, torch.tensor]:
+    """
+    Transforms the data. Returns a tuple of (x, y) where x is a tensor of the features and y is a
+    tensor of the labels.
+
+    Args:
+        architecture: The architecture to use. Must be one of ['fc', 'cnn'].
+        x: A dataframe of the features.
+        y: A series of the labels.
+    """
+    x = torch.tensor(x.values, dtype=torch.float32)
     # Normalize the tensor
     x_min = x.min()
     x_max = x.max()
-    normalized_x = (x - x_min) / (x_max - x_min)
-    assert normalized_x.min() == 0
-    assert normalized_x.max() == 1
-    return normalized_x
+    x = (x - x_min) / (x_max - x_min)
+    assert x.min() == 0
+    assert x.max() == 1
+    if architecture.lower() == 'cnn':
+        # Reshape data to have channel dimension
+        # MNIST images are 28x28, so we reshape them to [batch_size, 1, 28, 28]
+        x = x.reshape(-1, 1, 28, 28)
+    if y is not None:
+        y = torch.tensor(y.astype(int).values, dtype=torch.long)
+    return x, y
 
 
 def model_pipeline(config: dict | None = None) -> nn.Module:
@@ -125,30 +136,26 @@ def make_loader(x: torch.tensor, y: torch.tensor, batch_size: int) -> DataLoader
     )
 
 
-def _get_parameters(func: callable) -> list:
-    """Get the list of parameters of a function."""
-    return [k for k in inspect.signature(func).parameters if k != 'self']
-
-
 def make_model(input_size: int, output_size: int, config: dict) -> nn.Module:
     """Make a model based on the architecture."""
     architecture = config['architecture']
+    architecture = architecture.lower()
     device = config['device']
-    assert architecture in ['FC', 'CNN'], f"Unknown model type: {architecture}"
+    assert architecture in ['fc', 'cnn'], f"Unknown model type: {architecture}"
     assert device
-    if architecture == 'FC':
-        model_parameters = _get_parameters(FullyConnectedNN.__init__)
+    model_parameters = get_model_parameters(architecture=architecture)
+    if architecture == 'fc':
         model = FullyConnectedNN(
             input_size=input_size,
             output_size=output_size,
             **{k: v for k, v in config.items() if k in model_parameters},
         )
-    elif architecture == 'CNN':
+    elif architecture == 'cnn':
         dimension = int(math.sqrt(input_size))
         model = ConvNet2L(
             dimensions=(dimension, dimension),
             output_size=output_size,
-            **{k: v for k, v in config.items() if k in _get_parameters(ConvNet2L.__init__)},
+            **{k: v for k, v in config.items() if k in model_parameters},
         )
     else:
         raise ValueError(f"Unknown model type: {architecture}")
@@ -297,9 +304,8 @@ def train(  # noqa: PLR0915
             'best_validation_loss': early_stopping.lowest_loss,
             'best_epoch': early_stopping.best_index,
         })
-        # Save the model in the exchangeable ONNX format
-        torch.onnx.export(model, x_batch.to(device) , 'model.onnx')
-        wandb.save('model.onnx')
+        torch.save(model.state_dict(), os.path.join(wandb.run.dir, 'model_state.pth'))
+        wandb.save('model_state.pth')
     logging.info(f"Best validation loss: {early_stopping.lowest_loss:.3f}")
     logging.info(f"Best early stopping index/epoch: {early_stopping.best_index}")
 

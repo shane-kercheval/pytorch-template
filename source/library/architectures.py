@@ -1,5 +1,6 @@
 """NN architectures implemented in PyTorch."""
 
+import inspect
 import torch
 from torch import nn
 
@@ -203,3 +204,17 @@ class ConvNet2L(nn.Module):
         out = self.layer1(x)
         out = self.layer2(out)
         return self.fc(out)
+
+
+def _get_parameters(func: callable) -> list:
+    """Get the list of parameters of a function."""
+    return [k for k in inspect.signature(func).parameters if k != 'self']
+
+def get_model_parameters(architecture: str) -> list:
+    """Get the list of parameters of a function."""
+    architecture = architecture.lower()
+    if architecture == 'fc':
+        return _get_parameters(FullyConnectedNN.__init__)
+    if architecture == 'cnn':
+        return _get_parameters(ConvNet2L.__init__)
+    raise ValueError(f'Unknown architecture: {architecture}')
