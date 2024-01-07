@@ -30,9 +30,8 @@ def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
     criterion = nn.CrossEntropyLoss()
     optimizer_creator = make_optimizer(optimizer='sgd', model=model)
     # test model
-    expected_output_size = 10
     assert isinstance(model, FullyConnectedNN)
-    expected_sizes = [(784, 64), (64, 32), (32, expected_output_size)]
+    expected_sizes = [(784, 64), (64, 32), (32, OUTPUT_SIZE)]
     actual_sizes = [
         (layer.in_features, layer.out_features)
         for layer in model.layers if isinstance(layer, nn.Linear)
@@ -44,7 +43,7 @@ def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
     x_batch, y_batch = next(iter(train_loader))
     x_batch = x_batch.to(device)
     y_pred = model(x_batch)
-    assert list(y_pred.shape) == [len(y_batch), expected_output_size]
+    assert list(y_pred.shape) == [len(y_batch), OUTPUT_SIZE]
 
     # test loaders
     x_batch, y_batch = next(iter(train_loader))
@@ -81,9 +80,8 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     criterion = nn.CrossEntropyLoss()
     optimizer_creator = make_optimizer(optimizer='adam', model=model)
     # test model
-    expected_output_size = 10
     assert isinstance(model, ConvNet2L)
-    expected_sizes = [(1, 8, 3, 3), (8, 16, 7, 7), (784, expected_output_size)]
+    expected_sizes = [(1, 8, 3, 3), (8, 16, 7, 7), (784, OUTPUT_SIZE)]
     actual_sizes = [
         (model.layer1[0].weight.shape[1], model.layer1[0].weight.shape[0], model.layer1[0].kernel_size[0], model.layer1[0].kernel_size[1]),  # noqa
         (model.layer2[0].weight.shape[1], model.layer2[0].weight.shape[0], model.layer2[0].kernel_size[0], model.layer2[0].kernel_size[1]),  # noqa
@@ -96,7 +94,7 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     x_batch, y_batch = next(iter(train_loader))
     x_batch = x_batch.to(device)
     y_pred = model(x_batch)
-    assert list(y_pred.shape) == [len(y_batch), expected_output_size]
+    assert list(y_pred.shape) == [len(y_batch), OUTPUT_SIZE]
 
     # test loaders
     x_batch, y_batch = next(iter(train_loader))
@@ -206,7 +204,7 @@ def test__make_model__fc__default_config(default_fc_run_config, mnist_fc):  # no
     )
     # test forward pass
     out = model.forward(x_train[0:100].to(device))
-    assert list(out.shape) == [100, 10]
+    assert list(out.shape) == [100, OUTPUT_SIZE]
 
 def test__make_model__cnn__default_config(default_cnn_run_config, mnist_cnn):  # noqa
     device = get_available_device()
@@ -219,4 +217,4 @@ def test__make_model__cnn__default_config(default_cnn_run_config, mnist_cnn):  #
     )
     # test forward pass
     out = model.forward(x_train[0:100].to(device))
-    assert list(out.shape) == [100, 10]
+    assert list(out.shape) == [100, OUTPUT_SIZE]
