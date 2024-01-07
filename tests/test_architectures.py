@@ -4,6 +4,7 @@ import pytest
 import torch
 from torch import nn
 from source.library.architectures import Architecture, ConvNet2L, MODEL_REGISTRY, ModelRegistry
+from source.library.data import DIMENSIONS, INPUT_SIZE, OUTPUT_SIZE
 
 
 class ExampleModel(nn.Module):
@@ -14,10 +15,10 @@ class ExampleModel(nn.Module):
 
 
 @pytest.mark.parametrize('input_channels', [1, 3])
-@pytest.mark.parametrize('image_size', [(28, 28), (20, 100)])
+@pytest.mark.parametrize('image_size', [(DIMENSIONS[0], DIMENSIONS[1]), (20, 100)])
 @pytest.mark.parametrize('out_channels', [(16, 32), (32, 64)])
 @pytest.mark.parametrize('kernel_sizes', [(3, 5), (5, 3)])
-@pytest.mark.parametrize('num_classes', [5, 10])
+@pytest.mark.parametrize('num_classes', [5, OUTPUT_SIZE])
 @pytest.mark.parametrize('use_batch_norm', [True, False])
 @pytest.mark.parametrize('conv_dropout_p', [None, 0, 0.5])
 @pytest.mark.parametrize('fc_dropout_p', [None, 0, 0.5])
@@ -141,7 +142,10 @@ def test_create_instance_success(registry):  # noqa
     """Test successful creation of a model instance."""
     registry.register('TestModel', ExampleModel)
     instance = registry.create_instance(
-        'TestModel', input_size=28*28, output_size=10, model_parameters={},
+        'TestModel',
+        input_size=INPUT_SIZE,
+        output_size=OUTPUT_SIZE,
+        model_parameters={},
     )
     assert isinstance(instance, ExampleModel)
 
@@ -151,7 +155,10 @@ def test_create_instance_kwargs(registry):  # noqa
     """Test that kwargs are passed to model constructor."""
     registry.register('TestModel', ExampleModel)
     instance = registry.create_instance(
-        'TestModel', input_size=28*28, output_size=10, model_parameters={'foo': 'bar'},
+        'TestModel',
+        input_size=INPUT_SIZE,
+        output_size=OUTPUT_SIZE,
+        model_parameters={'foo': 'bar'},
     )
     assert instance.foo == 'bar'
 
@@ -159,7 +166,12 @@ def test_create_instance_kwargs(registry):  # noqa
 def test_create_instance_unregistered(registry):  # noqa
     """Test error when creating an instance of an unregistered model."""
     with pytest.raises(ValueError):  # noqa
-        registry.create_instance('UnregisteredModel', input_size=28*28, output_size=10, model_parameters={})  # noqa
+        registry.create_instance(
+            'UnregisteredModel',
+            input_size=INPUT_SIZE,
+            output_size=OUTPUT_SIZE,
+            model_parameters={},
+        )
 
 
 def test_list_models(registry):  # noqa

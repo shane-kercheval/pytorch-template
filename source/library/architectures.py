@@ -2,6 +2,7 @@
 
 from enum import Enum
 import inspect
+import math
 import torch
 from torch import nn
 
@@ -44,13 +45,18 @@ class ModelRegistry:
             architecture: Architecture,
             input_size: int,
             output_size: int,
-            model_parameters: dict) -> nn.Module:
+            model_parameters: dict,
+            dimensions: tuple[int, int] | None = None,
+            ) -> nn.Module:
         """Create an instance of a model."""
         if architecture not in self._registry:
             raise ValueError(f"Model '{architecture}' not found in registry.")
         model_parameters['input_size'] = input_size
         model_parameters['output_size'] = output_size
-        model_parameters['dimensions'] = (28, 28)
+        if dimensions is None:
+            dimension = int(math.sqrt(input_size))
+            dimensions = (dimension, dimension)
+        model_parameters['dimensions'] = dimensions
         model_parameters = {
             k: v for k, v in model_parameters.items()
             if k in self.get_parameters(architecture)

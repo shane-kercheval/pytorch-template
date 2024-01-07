@@ -13,6 +13,7 @@ import logging
 import os
 import click
 from source.library.architectures import Architecture
+from source.library.data import INPUT_SIZE, OUTPUT_SIZE
 from source.library.experiment import (
     make_model,
     model_pipeline,
@@ -39,11 +40,20 @@ def main() -> None:
 @click.option('-config_file', '-c', type=str)
 @click.option('-device', type=str, default=None)
 def run(config_file: str, device: str | None = None) -> None:
-    """Execute a single 'run' on Weights and Biases."""
+    """
+    Execute a single 'run' on Weights and Biases.
+
+    Args:
+        config_file:
+            Path to the YAML configuration file.
+        device:
+            Device to use for training. If None, will use 'cuda' if available, 'mps' if available,
+            and 'cpu' otherwise.
+    """
     logging.info(f"Configuration file: {config_file}")
     with open(config_file) as f:
         config = yaml.safe_load(f)
-        pprint.pprint(config)
+    pprint.pprint(config)
     device = get_available_device() if device is None else device
     logging.info(f"Device: {device}")
     config['device'] = device
@@ -75,20 +85,18 @@ def sweep(
     with open(config_file) as f:
         config = yaml.safe_load(f)
     pprint.pprint(config)
-    num_combinations = _num_combinations(config)
-    logging.info(f"Number of parameter combinations: {num_combinations}")
-    if device is None:
-        device = get_available_device()
+    num_param_combos = _num_combinations(config)
+    logging.info(f"Number of parameter combinations: {num_param_combos}")
+    # inject device into config so that Weights and Biases passes it to model_pipeline
+    device = get_available_device() if device is None else device
     logging.info(f"Device: {device}")
     config['parameters']['device'] = {'value': device}
-
     sweep_id = wandb.sweep(config)
     if config['method'] == 'grid':
         runs = None
-        logging.info(f"Running grid search with {num_combinations} combinations.")
+        logging.info(f"Running grid search with {num_param_combos} combinations.")
     else:
         logging.info(f"Running {config['method']} search with {runs} runs.")
-
     wandb.agent(sweep_id, model_pipeline, count=runs)
 
 
@@ -103,7 +111,19 @@ def num_combinations(config_file: str) -> None:
 
 
 def _num_combinations(config: dict) -> int:
-    return np.cumprod([len(v['values']) for v in config['parameters'].values() if 'values' in v])[-1]  # noqa
+    """
+    Returns the number of combinations for hyper-parameter search assuming grid search is used.
+
+    Args:
+        config:
+            A config file from a Weights and Baises sweep, which should have a parameters key,
+            which is a dictionary of hyper-parameters. Each hyper-parameter should have a `values`
+            key, which is a list of values to try (as opposed to single value config items, which
+            have a `value` key instead of a `values` key).
+    """
+    return np.cumprod([
+        len(v['values']) for v in config['parameters'].values() if 'values' in v
+    ])[-1]
 
 
 @main.command()
@@ -126,7 +146,7 @@ def predict(
     Predict on a dataset loaded from parquet file. Uses the model state and config from a
     particular project/run.
 
-    NOTE: a better way to implement this would be to use the Weights and Biases model registry.
+    NOTE: A better way to implement this would be to use the Weights and Biases model registry.
 
     Args:
         x_parquet_path:
@@ -147,16 +167,16 @@ def predict(
     """
     logging.info(f"Loading model from run {w_and_b_run_id}.")
     run_path = f'{w_and_b_user}/{w_and_b_project}/{w_and_b_run_id}'
-    model_state = torch.load(wandb.restore(w_and_b_model_name, run_path=run_path).name)
     model_config = wandb.restore('config.yaml',run_path=run_path)
     with open(model_config.name) as f:
         model_config = yaml.safe_load(f)
-    # model config is stored in a different format in wandb than in the config file
     model_config = {
+        # model config is stored in a different format in wandb than in the config file
         k: v['value'] for k, v in model_config.items()
         if isinstance(v, dict) and 'value' in v
     }
-    model = make_model(input_size=28*28, output_size=10, config=model_config)
+    model = make_model(input_size=INPUT_SIZE, output_size=OUTPUT_SIZE, config=model_config)
+    model_state = torch.load(wandb.restore(w_and_b_model_name, run_path=run_path).name)
     model.load_state_dict(model_state)
     # load data
     x = pd.read_parquet(x_parquet_path)

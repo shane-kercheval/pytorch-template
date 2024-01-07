@@ -4,7 +4,6 @@ import logging
 import math
 import os
 import pprint
-import pandas as pd
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -14,11 +13,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
-from sklearn.datasets import fetch_openml
-from sklearn.model_selection import train_test_split
 
 from source.library.architectures import Architecture, MODEL_REGISTRY
 from source.library.pytorch_helpers import EarlyStopping, calculate_average_loss
+from source.library.data import DIMENSIONS, INPUT_SIZE, OUTPUT_SIZE, get_data
 
 
 def get_available_device() -> str:
@@ -28,48 +26,6 @@ def get_available_device() -> str:
     if torch.backends.mps.is_available():
         return torch.device('mps').type  # https://pytorch.org/docs/stable/notes/mps.html
     return torch.device('cpu').type
-
-
-def get_data(architecture: Architecture):  # noqa
-    """Function is required by and called from `model_pipeline()`."""
-    x, y = fetch_openml('mnist_784', version=1, return_X_y=True, parser='auto')
-    x, y = transform_data(architecture=architecture, x=x, y=y)
-    # 80% train; 10% validation; 10% test
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
-    x_test, x_val, y_test, y_val = train_test_split(x_test, y_test, test_size=0.5, random_state=42)
-    logging.info(f"Training set  : X-{x_train.shape}, y-{y_train.shape}")
-    logging.info(f"Validation set: X-{x_val.shape}, y-{y_val.shape}")
-    logging.info(f"Test set      : X-{x_test.shape}, y-{y_test.shape}")
-    return x_train, x_val, x_test, y_train, y_val, y_test
-
-
-def transform_data(
-        architecture: Architecture,
-        x: pd.DataFrame,
-        y: pd.Series | None = None) -> tuple[torch.tensor, torch.tensor]:
-    """
-    Transforms the data. Returns a tuple of (x, y) where x is a tensor of the features and y is a
-    tensor of the labels.
-
-    Args:
-        architecture: The architecture to use.
-        x: A dataframe of the features.
-        y: A series of the labels.
-    """
-    x = torch.tensor(x.values, dtype=torch.float32)
-    # Normalize the tensor
-    x_min = x.min()
-    x_max = x.max()
-    x = (x - x_min) / (x_max - x_min)
-    assert x.min() == 0
-    assert x.max() == 1
-    if architecture == Architecture.CONVOLUTIONAL:
-        # Reshape data to have channel dimension
-        # MNIST images are 28x28, so we reshape them to [batch_size, 1, 28, 28]
-        x = x.reshape(-1, 1, 28, 28)
-    if y is not None:
-        y = torch.tensor(y.astype(int).values, dtype=torch.long)
-    return x, y
 
 
 def model_pipeline(config: dict | None = None) -> nn.Module:
@@ -96,7 +52,7 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
         x_train, x_val, x_test, y_train, y_val, y_test = get_data(architecture=architecture)
         train_loader = make_loader(x_train, y_train, batch_size=config.batch_size)
         validation_loader = make_loader(x_val, y_val, batch_size=config.batch_size)
-        model = make_model(input_size=28*28, output_size=10, config=config)
+        model = make_model(input_size=INPUT_SIZE, output_size=OUTPUT_SIZE, config=config)
         criterion = nn.CrossEntropyLoss()
         optimizer_creator = make_optimizer(optimizer=config.optimizer, model=model)
         train(
@@ -362,7 +318,7 @@ def evaluate(
     plot_scores(precision, recall, f1, log_wandb=log_wandb)
     if log_wandb:
         score_table = wandb.Table(columns=["class", "precision", "recall", "f1"])
-        for i in range(10):
+        for i in range(OUTPUT_SIZE):
             score_table.add_data(str(i), precision[i], recall[i], f1[i])
         wandb.log({"score_table": score_table})
 
@@ -396,8 +352,7 @@ def plot_misclassified_sample(
     mismatched_indexes = np.where(predictions != labels)[0]
     rows = np.random.choice(mismatched_indexes, size=num_images, replace=False)  # noqa: NPY002
     for i, row in enumerate(rows):
-        # img = X_test[row].cpu().numpy().reshape(28, 28)
-        img = images[row].cpu().numpy().reshape(28, 28)
+        img = images[row].cpu().numpy().reshape(DIMENSIONS[0], DIMENSIONS[1])
         ax[i].imshow(img, cmap='Greys')
         title_color = 'red' if predictions[row] != labels[row] else 'black'
         ax[i].set_title(f'P:{predictions[row]} - A:{labels[row]}', color=title_color)
@@ -416,7 +371,7 @@ def plot_heatmap(predictions: np.array, labels: np.array, log_wandb: bool) -> No
     cm = confusion_matrix(labels, predictions)
     # remove the diagonal values (correct predictions) for better visualization
     np.fill_diagonal(cm, 0)
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(OUTPUT_SIZE, OUTPUT_SIZE))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False)
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
@@ -430,7 +385,7 @@ def plot_heatmap(predictions: np.array, labels: np.array, log_wandb: bool) -> No
 def plot_scores(precision: list, recall: list, f1: list, log_wandb: bool) -> None:
     """Plot the precision, recall, and f1 scores for each class."""
     # create a bar plot
-    x = range(10)
+    x = range(OUTPUT_SIZE)
     width = 0.2
     fig, ax = plt.subplots()
     _ = ax.bar(x, precision, width, label='Precision')
@@ -441,7 +396,7 @@ def plot_scores(precision: list, recall: list, f1: list, log_wandb: bool) -> Non
     ax.set_ylabel('Score')
     ax.set_title('Accuracy Metrics by Class')
     ax.set_xticks([i + width for i in x])
-    ax.set_xticklabels(range(10))
+    ax.set_xticklabels(range(OUTPUT_SIZE))
     ax.legend()
     # find the minimum and maximum score values (from precision, recall, and f1 lists) and set the
     # y limits slightly wider to make the plot easier to read
