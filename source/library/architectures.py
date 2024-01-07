@@ -1,10 +1,92 @@
 """NN architectures implemented in PyTorch."""
 
+from enum import Enum
 import inspect
 import torch
 from torch import nn
 
 
+class Architecture(Enum):
+    """Available architectures."""
+
+    FULLY_CONNECTED = 'fully_connected'
+    CONVOLUTIONAL = 'convolutional'
+
+    @staticmethod
+    def to_enum(architecture: str) -> 'Architecture':
+        """Get an architecture from a string."""
+        if isinstance(architecture, Architecture):
+            return architecture
+        for enum_value in Architecture:
+            if enum_value.value.lower() == architecture.lower():
+                return enum_value
+        raise ValueError(f"{architecture} is not a valid Architecture")
+
+
+class ModelRegistry:
+    """Registry for models."""
+
+    def __init__(self):
+        self._registry: dict[str, nn.Module] = {}
+
+    def register(self, name: str, cls: nn.Module) -> None:
+        """Register a model with the registry."""
+        if name in self._registry:
+            raise ValueError(f"A model with name '{name}' is already registered.")
+        self._registry[name] = cls
+
+    def get_parameters(self, architecture: Architecture) -> list:
+        """Get the list of parameters of a function."""
+        return _get_parameters(self._registry[architecture].__init__)
+
+    def create_instance(
+            self,
+            architecture: Architecture,
+            input_size: int,
+            output_size: int,
+            model_parameters: dict) -> nn.Module:
+        """Create an instance of a model."""
+        if architecture not in self._registry:
+            raise ValueError(f"Model '{architecture}' not found in registry.")
+        model_parameters['input_size'] = input_size
+        model_parameters['output_size'] = output_size
+        model_parameters['dimensions'] = (28, 28)
+        model_parameters = {
+            k: v for k, v in model_parameters.items()
+            if k in self.get_parameters(architecture)
+        }
+        return self._registry[architecture](**model_parameters)
+
+    def list_models(self) -> dict[str, nn.Module]:
+        """List all registered models."""
+        return self._registry
+
+    def __contains__(self, model_name: str) -> bool:
+        """Check if a model is registered."""
+        return model_name in self._registry
+
+
+def register_model(architecture: Architecture) -> callable:
+    """Decorator to register a model with a custom architecture."""
+    def decorator(cls: nn.Module) -> nn.Module:
+        assert issubclass(cls, nn.Module), \
+            f"Model '{architecture}' ({cls.__name__}) must extend Pytorch model"
+        assert (architecture not in MODEL_REGISTRY), \
+            f"Model architecture '{architecture}' already registered."
+        MODEL_REGISTRY.register(architecture, cls)
+        return cls
+    return decorator
+
+
+def _get_parameters(func: callable) -> list:
+    """Get the list of parameters of a function."""
+    return [k for k in inspect.signature(func).parameters if k != 'self']
+
+
+MODEL_REGISTRY = ModelRegistry()
+
+
+@register_model(Architecture.FULLY_CONNECTED)
 class FullyConnectedNN(nn.Module):
     """
     Implements a feed-forward fully connected PyTorch neural network. The number of
@@ -40,41 +122,12 @@ class FullyConnectedNN(nn.Module):
         return x
 
 
-# class ConvNet2L(nn.Module):
-#     """Convolutional neural network (two convolutional layers)."""
-
-#     def __init__(self, kernel_0: int, kernel_1: int, classes: int = 10):
-#         super().__init__()
-
-#         self.layer1 = nn.Sequential(
-#             nn.Conv2d(
-#                 in_channels=1,
-#                 out_channels=kernel_0,
-#                 kernel_size=5,
-#                 stride=1,
-#                 padding=2,
-#             ),
-#             nn.ReLU(),
-#             nn.MaxPool2d(kernel_size=2, stride=2))
-#         self.layer2 = nn.Sequential(
-#             nn.Conv2d(kernel_0, kernel_1, kernel_size=5, stride=1, padding=2),
-#             nn.ReLU(),
-#             nn.MaxPool2d(kernel_size=2, stride=2))
-#         self.fc = nn.Linear(7 * 7 * kernel_1, classes)
-
-#     def forward(self, x: torch.Tensor) -> torch.Tensor:
-#         """Forward pass."""
-#         out = self.layer1(x)
-#         out = self.layer2(out)
-#         out = out.reshape(out.size(0), -1)
-#         return self.fc(out)
-
-
 def calculate_same_padding(kernel_size: int, stride: int) -> int:
     """Calculate padding size to achieve 'same' padding, considering stride."""
     return ((kernel_size - 1) * stride) // 2
 
 
+@register_model(Architecture.CONVOLUTIONAL)
 class ConvNet2L(nn.Module):
     """
     Convolutional neural network with two convolutional layers e.g.
@@ -204,17 +257,3 @@ class ConvNet2L(nn.Module):
         out = self.layer1(x)
         out = self.layer2(out)
         return self.fc(out)
-
-
-def _get_parameters(func: callable) -> list:
-    """Get the list of parameters of a function."""
-    return [k for k in inspect.signature(func).parameters if k != 'self']
-
-def get_model_parameters(architecture: str) -> list:
-    """Get the list of parameters of a function."""
-    architecture = architecture.lower()
-    if architecture == 'fc':
-        return _get_parameters(FullyConnectedNN.__init__)
-    if architecture == 'cnn':
-        return _get_parameters(ConvNet2L.__init__)
-    raise ValueError(f'Unknown architecture: {architecture}')

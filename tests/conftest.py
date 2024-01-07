@@ -8,6 +8,7 @@ import os
 import logging.config
 
 import yaml
+from source.library.architectures import Architecture
 
 from source.library.experiment import get_data
 
@@ -29,12 +30,12 @@ def dummy_x_y() -> Tuple[torch.Tensor, torch.Tensor]:  # noqa
 
 @pytest.fixture(scope='session')
 def mnist_fc():  # noqa
-    return get_data(architecture='FC')
+    return get_data(architecture=Architecture.FULLY_CONNECTED)
 
 
 @pytest.fixture(scope='session')
 def mnist_cnn():  # noqa
-    return get_data(architecture='CNN')
+    return get_data(architecture=Architecture.CONVOLUTIONAL)
 
 
 @pytest.fixture(scope='session')

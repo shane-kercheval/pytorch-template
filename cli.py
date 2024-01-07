@@ -12,6 +12,7 @@ import logging.config
 import logging
 import os
 import click
+from source.library.architectures import Architecture
 from source.library.experiment import (
     make_model,
     model_pipeline,
@@ -132,8 +133,6 @@ def predict(
             Path to parquet file containing x data.
         predictions_path:
             Path to parquet file where predictions will be saved.
-        arch:
-            Architecture to use for prediction. Must be one of ['fc', 'cnn'].
         w_and_b_run_id:
             Weights and Biases run id. Model state is assumed to be `model_state.pt`.
         w_and_b_user:
@@ -162,7 +161,10 @@ def predict(
     # load data
     x = pd.read_parquet(x_parquet_path)
     y = pd.read_parquet(y_parquet_path).iloc[:, 0] if y_parquet_path is not None else None
-    x, y = transform_data(x=x, y=y, architecture=model_config['architecture'])
+    x, y = transform_data(
+        x=x, y=y,
+        architecture=Architecture.to_enum(model_config['architecture']),
+    )
     assert len(x) == len(y)
     # predict
     device = get_available_device()

@@ -2,7 +2,7 @@ project: pytorch-template
 tags:
   - template
 notes: default configuration for a convolutional neural network
-architecture: CNN
+architecture: convolutional
 # experiment parameters
 epochs: 100
 optimizer: adam

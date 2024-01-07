@@ -1,7 +1,7 @@
 """Test the experiment module."""
 import torch
 from torch import nn
-from source.library.architectures import FullyConnectedNN, ConvNet2L
+from source.library.architectures import Architecture, FullyConnectedNN, ConvNet2L
 from source.library.experiment import (
     train,
     evaluate,
@@ -21,7 +21,7 @@ def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
         input_size=28*28,
         output_size=10,
         config = {
-            'architecture': 'FC',
+            'architecture': Architecture.FULLY_CONNECTED,
             'hidden_layers': [64, 32],
             'device': device,
         },
@@ -71,7 +71,7 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
         input_size=28*28,
         output_size=10,
         config={
-            'architecture': 'CNN',
+            'architecture': Architecture.CONVOLUTIONAL,
             'out_channels': [8, 16],
             'kernel_sizes': [3, 7],
             'device': device,
@@ -123,7 +123,7 @@ def test__train__fc(mnist_fc):  # noqa
         input_size=28*28,
         output_size=10,
         config={
-            'architecture': 'FC',
+            'architecture': Architecture.FULLY_CONNECTED,
             'hidden_layers': [64],
             'device': device,
         },
@@ -162,7 +162,7 @@ def test__train__cnn(mnist_cnn):  # noqa
         input_size=28*28,
         output_size=10,
         config={
-            'architecture': 'CNN',
+            'architecture': Architecture.CONVOLUTIONAL,
             'out_channels': [8, 16],
             'kernel_sizes': [3, 7],
             'device': device,

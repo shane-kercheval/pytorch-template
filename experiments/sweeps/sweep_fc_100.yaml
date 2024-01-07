@@ -15,7 +15,7 @@ parameters:
   # configuration parameters (fixed; via `value`)
   ####
   architecture:
-    value: FC
+    value: fully_connected
   epochs:
     value: 100
   early_stopping_patience:

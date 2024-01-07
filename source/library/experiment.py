@@ -17,7 +17,7 @@ from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 
-from source.library.architectures import FullyConnectedNN, ConvNet2L, get_model_parameters
+from source.library.architectures import Architecture, MODEL_REGISTRY
 from source.library.pytorch_helpers import EarlyStopping, calculate_average_loss
 
 
@@ -30,9 +30,8 @@ def get_available_device() -> str:
     return torch.device('cpu').type
 
 
-def get_data(architecture: str):  # noqa
+def get_data(architecture: Architecture):  # noqa
     """Function is required by and called from `model_pipeline()`."""
-    assert architecture.lower() in ['fc', 'cnn'], f"Architecture {architecture} not supported."
     x, y = fetch_openml('mnist_784', version=1, return_X_y=True, parser='auto')
     x, y = transform_data(architecture=architecture, x=x, y=y)
     # 80% train; 10% validation; 10% test
@@ -45,7 +44,7 @@ def get_data(architecture: str):  # noqa
 
 
 def transform_data(
-        architecture: str,
+        architecture: Architecture,
         x: pd.DataFrame,
         y: pd.Series | None = None) -> tuple[torch.tensor, torch.tensor]:
     """
@@ -53,7 +52,7 @@ def transform_data(
     tensor of the labels.
 
     Args:
-        architecture: The architecture to use. Must be one of ['fc', 'cnn'].
+        architecture: The architecture to use.
         x: A dataframe of the features.
         y: A series of the labels.
     """
@@ -64,7 +63,7 @@ def transform_data(
     x = (x - x_min) / (x_max - x_min)
     assert x.min() == 0
     assert x.max() == 1
-    if architecture.lower() == 'cnn':
+    if architecture == Architecture.CONVOLUTIONAL:
         # Reshape data to have channel dimension
         # MNIST images are 28x28, so we reshape them to [batch_size, 1, 28, 28]
         x = x.reshape(-1, 1, 28, 28)
@@ -138,29 +137,17 @@ def make_loader(x: torch.tensor, y: torch.tensor, batch_size: int) -> DataLoader
 
 def make_model(input_size: int, output_size: int, config: dict) -> nn.Module:
     """Make a model based on the architecture."""
-    architecture = config['architecture']
-    architecture = architecture.lower()
+    architecture = Architecture.to_enum(config['architecture'])
+    model = MODEL_REGISTRY.create_instance(
+        architecture=architecture,
+        input_size=input_size,
+        output_size=output_size,
+        model_parameters=config,
+    )
     device = config['device']
-    assert architecture in ['fc', 'cnn'], f"Unknown model type: {architecture}"
     assert device
-    model_parameters = get_model_parameters(architecture=architecture)
-    if architecture == 'fc':
-        model = FullyConnectedNN(
-            input_size=input_size,
-            output_size=output_size,
-            **{k: v for k, v in config.items() if k in model_parameters},
-        )
-    elif architecture == 'cnn':
-        dimension = int(math.sqrt(input_size))
-        model = ConvNet2L(
-            dimensions=(dimension, dimension),
-            output_size=output_size,
-            **{k: v for k, v in config.items() if k in model_parameters},
-        )
-    else:
-        raise ValueError(f"Unknown model type: {architecture}")
     model = model.to(device)
-    print(model)
+    logging.info(f"Created Model: \n{model}\n")
     return model
 
 

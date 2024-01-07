@@ -18,7 +18,7 @@ parameters:
   # configuration parameters (fixed; via `value`)
   ####
   architecture:
-    value: CNN
+    value: convolutional
   epochs:
     value: 100
   early_stopping_patience:

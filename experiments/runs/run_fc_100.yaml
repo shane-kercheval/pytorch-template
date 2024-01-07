@@ -2,7 +2,7 @@ project: pytorch-demo
 tags:
   - default
 notes: default configuration for a fully connected network
-architecture: FC
+architecture: fully_connected
 # experiment parameters
 epochs: 100
 optimizer: adam
