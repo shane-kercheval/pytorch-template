@@ -125,6 +125,8 @@ def predict(
     Predict on a dataset loaded from parquet file. Uses the model state and config from a
     particular project/run.
 
+    NOTE: a better way to implement this would be to use the Weights and Biases model registry.
+
     Args:
         x_parquet_path:
             Path to parquet file containing x data.
