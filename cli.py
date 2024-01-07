@@ -13,12 +13,11 @@ import logging
 import os
 import click
 from source.library.architectures import Architecture
-from source.library.data import CHANNELS, DIMENSIONS, OUTPUT_SIZE
+from source.library.data import CHANNELS, DIMENSIONS, OUTPUT_SIZE, transform_data
 from source.library.experiment import (
     make_model,
     model_pipeline,
     get_available_device,
-    transform_data,
     predict as pred,
 )
 from dotenv import load_dotenv
@@ -199,6 +198,11 @@ def predict(
     if y is not None:
         print(f"Accuracy: {(predictions.numpy() == y.numpy()).mean():.2%}")
 
+
+@main.command()
+def available_device() -> None:
+    """Print the available device."""
+    print(get_available_device())
 
 ####
 # functions used for testing

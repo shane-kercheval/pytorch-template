@@ -49,10 +49,10 @@ open_coverage:
 
 # template / default runs
 run_fc_default:
-	python cli.py run -config_file=templates/run_fc.yaml
+	python cli.py run -config_file=experiments/templates/run_fc.yaml
 
 run_cnn_default:
-	python cli.py run -config_file=templates/run_cnn.yaml
+	python cli.py run -config_file=experiments/templates/run_cnn.yaml
 
 
 # sweep fc

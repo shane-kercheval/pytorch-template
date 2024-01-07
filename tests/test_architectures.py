@@ -9,7 +9,7 @@ from source.library.architectures import (
     MODEL_REGISTRY,
     ModelRegistry,
 )
-from source.library.data import DIMENSIONS, INPUT_SIZE, OUTPUT_SIZE
+from source.library.data import CHANNELS, DIMENSIONS, OUTPUT_SIZE
 
 
 class ExampleModel(nn.Module):
@@ -153,7 +153,8 @@ def test_create_instance_success(registry):  # noqa
     registry.register('TestModel', ExampleModel)
     instance = registry.create_instance(
         'TestModel',
-        input_size=INPUT_SIZE,
+        data_dimensions=DIMENSIONS,
+        in_channels=CHANNELS,
         output_size=OUTPUT_SIZE,
         model_parameters={},
     )
@@ -166,7 +167,8 @@ def test_create_instance_kwargs(registry):  # noqa
     registry.register('TestModel', ExampleModel)
     instance = registry.create_instance(
         'TestModel',
-        input_size=INPUT_SIZE,
+        data_dimensions=DIMENSIONS,
+        in_channels=CHANNELS,
         output_size=OUTPUT_SIZE,
         model_parameters={'foo': 'bar'},
     )
@@ -178,7 +180,8 @@ def test_create_instance_unregistered(registry):  # noqa
     with pytest.raises(ValueError):  # noqa
         registry.create_instance(
             'UnregisteredModel',
-            input_size=INPUT_SIZE,
+            data_dimensions=DIMENSIONS,
+            in_channels=CHANNELS,
             output_size=OUTPUT_SIZE,
             model_parameters={},
         )
