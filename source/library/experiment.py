@@ -92,7 +92,8 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
     with wandb.init(project=project, config=config, tags=tags, notes=notes):
         config = wandb.config
         pprint.pprint(config)
-        x_train, x_val, x_test, y_train, y_val, y_test = get_data(architecture=config.architecture)
+        architecture = Architecture.to_enum(config['architecture'])
+        x_train, x_val, x_test, y_train, y_val, y_test = get_data(architecture=architecture)
         train_loader = make_loader(x_train, y_train, batch_size=config.batch_size)
         validation_loader = make_loader(x_val, y_val, batch_size=config.batch_size)
         model = make_model(input_size=28*28, output_size=10, config=config)
