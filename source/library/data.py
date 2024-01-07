@@ -9,6 +9,7 @@ from source.library.architectures import Architecture
 
 
 DIMENSIONS = (28, 28)
+CHANNELS = 1  # grayscale
 INPUT_SIZE = DIMENSIONS[0] * DIMENSIONS[1]
 OUTPUT_SIZE = 10
 
@@ -49,7 +50,7 @@ def transform_data(
     if architecture == Architecture.CONVOLUTIONAL:
         # Reshape data to have channel dimension
         # MNIST images are 28x28, so we reshape them to [batch_size, 1, 28, 28]
-        x = x.reshape(-1, 1, DIMENSIONS[0], DIMENSIONS[1])
+        x = x.reshape(-1, CHANNELS, DIMENSIONS[0], DIMENSIONS[1])
     if y is not None:
         y = torch.tensor(y.astype(int).values, dtype=torch.long)
     return x, y

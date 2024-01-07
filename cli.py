@@ -13,7 +13,7 @@ import logging
 import os
 import click
 from source.library.architectures import Architecture
-from source.library.data import INPUT_SIZE, OUTPUT_SIZE
+from source.library.data import CHANNELS, DIMENSIONS, OUTPUT_SIZE
 from source.library.experiment import (
     make_model,
     model_pipeline,
@@ -175,7 +175,12 @@ def predict(
         k: v['value'] for k, v in model_config.items()
         if isinstance(v, dict) and 'value' in v
     }
-    model = make_model(input_size=INPUT_SIZE, output_size=OUTPUT_SIZE, config=model_config)
+    model = make_model(
+        data_dimensions=DIMENSIONS,
+        in_channels=CHANNELS,
+        output_size=OUTPUT_SIZE,
+        config=model_config,
+    )
     model_state = torch.load(wandb.restore(w_and_b_model_name, run_path=run_path).name)
     model.load_state_dict(model_state)
     # load data

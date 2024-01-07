@@ -16,7 +16,7 @@ from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 
 from source.library.architectures import Architecture, MODEL_REGISTRY
 from source.library.pytorch_helpers import EarlyStopping, calculate_average_loss
-from source.library.data import DIMENSIONS, INPUT_SIZE, OUTPUT_SIZE, get_data
+from source.library.data import CHANNELS, DIMENSIONS, OUTPUT_SIZE, get_data
 
 
 def get_available_device() -> str:
@@ -52,7 +52,12 @@ def model_pipeline(config: dict | None = None) -> nn.Module:
         x_train, x_val, x_test, y_train, y_val, y_test = get_data(architecture=architecture)
         train_loader = make_loader(x_train, y_train, batch_size=config.batch_size)
         validation_loader = make_loader(x_val, y_val, batch_size=config.batch_size)
-        model = make_model(input_size=INPUT_SIZE, output_size=OUTPUT_SIZE, config=config)
+        model = make_model(
+            data_dimensions=DIMENSIONS,
+            in_channels=CHANNELS,
+            output_size=OUTPUT_SIZE,
+            config=config,
+        )
         criterion = nn.CrossEntropyLoss()
         optimizer_creator = make_optimizer(optimizer=config.optimizer, model=model)
         train(
@@ -92,12 +97,17 @@ def make_loader(x: torch.tensor, y: torch.tensor, batch_size: int) -> DataLoader
     )
 
 
-def make_model(input_size: int, output_size: int, config: dict) -> nn.Module:
+def make_model(
+        data_dimensions: tuple[int, int],
+        in_channels: int,
+        output_size: int,
+        config: dict) -> nn.Module:
     """Make a model based on the architecture."""
     architecture = Architecture.to_enum(config['architecture'])
     model = MODEL_REGISTRY.create_instance(
         architecture=architecture,
-        input_size=input_size,
+        data_dimensions=data_dimensions,
+        in_channels=in_channels,
         output_size=output_size,
         model_parameters=config,
     )

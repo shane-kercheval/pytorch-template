@@ -3,7 +3,12 @@
 import pytest
 import torch
 from torch import nn
-from source.library.architectures import Architecture, ConvNet2L, MODEL_REGISTRY, ModelRegistry
+from source.library.architectures import (
+    Architecture,
+    ConvolutionalNet,
+    MODEL_REGISTRY,
+    ModelRegistry,
+)
 from source.library.data import DIMENSIONS, INPUT_SIZE, OUTPUT_SIZE
 
 
@@ -24,7 +29,7 @@ class ExampleModel(nn.Module):
 @pytest.mark.parametrize('fc_dropout_p', [None, 0, 0.5])
 @pytest.mark.parametrize('activation_type', ['relu', 'leaky_relu'])
 @pytest.mark.parametrize('include_second_fc', [True, False])
-def test_convnet2l_initialization(  # noqa
+def test_ConvolutionalNet__2_layers__initialization(  # noqa
         input_channels: int,
         image_size: tuple,
         out_channels: tuple,
@@ -35,7 +40,7 @@ def test_convnet2l_initialization(  # noqa
         fc_dropout_p: float | None,
         activation_type: str,
         include_second_fc: bool):
-    model = ConvNet2L(
+    model = ConvolutionalNet(
         dimensions=image_size,
         input_channels=input_channels,
         out_channels=out_channels,
@@ -47,46 +52,51 @@ def test_convnet2l_initialization(  # noqa
         activation_type=activation_type,
         include_second_fc_layer=include_second_fc,
     )
-    assert model.layer1 is not None
-    assert model.layer2 is not None
+    assert len(model.convs) == len(out_channels)
     assert model.fc is not None
-    assert isinstance(model.layer1[0], nn.Conv2d)
-    assert model.layer1[0].in_channels == input_channels
-    assert model.layer1[0].out_channels == out_channels[0]
+    assert isinstance(model.convs[0][0], nn.Conv2d)
+    assert model.convs[0][0].in_channels == input_channels
+    assert model.convs[0][0].out_channels == out_channels[0]
     if use_batch_norm:
         next_index = 2
-        assert isinstance(model.layer1[1], nn.BatchNorm2d)
+        assert isinstance(model.convs[0][1], nn.BatchNorm2d)
     else:
         next_index = 1
-    assert isinstance(model.layer1[next_index], type(ConvNet2L._get_activation(activation_type)))
-    assert isinstance(model.layer1[next_index + 1], nn.MaxPool2d)
+    assert isinstance(
+        model.convs[0][next_index],
+        type(ConvolutionalNet._get_activation(activation_type)),
+    )
+    assert isinstance(model.convs[0][next_index + 1], nn.MaxPool2d)
     if conv_dropout_p:
-        assert isinstance(model.layer1[next_index + 2], nn.Dropout2d)
-        assert model.layer1[next_index + 2].p == conv_dropout_p
+        assert isinstance(model.convs[0][next_index + 2], nn.Dropout2d)
+        assert model.convs[0][next_index + 2].p == conv_dropout_p
     else:
-        assert not any(isinstance(layer, nn.Dropout2d) for layer in model.layer1)
+        assert not any(isinstance(layer, nn.Dropout2d) for layer in model.convs[0])
 
-    assert isinstance(model.layer2[0], nn.Conv2d)
-    assert model.layer2[0].in_channels == out_channels[0]
-    assert model.layer2[0].out_channels == out_channels[1]
+    assert isinstance(model.convs[1][0], nn.Conv2d)
+    assert model.convs[1][0].in_channels == out_channels[0]
+    assert model.convs[1][0].out_channels == out_channels[1]
     if use_batch_norm:
         next_index = 2
-        assert isinstance(model.layer2[1], nn.BatchNorm2d)
+        assert isinstance(model.convs[1][1], nn.BatchNorm2d)
     else:
         next_index = 1
-    assert isinstance(model.layer2[next_index], type(ConvNet2L._get_activation(activation_type)))
-    assert isinstance(model.layer2[next_index + 1], nn.MaxPool2d)
+    assert isinstance(
+        model.convs[1][next_index],
+        type(ConvolutionalNet._get_activation(activation_type)),
+    )
+    assert isinstance(model.convs[1][next_index + 1], nn.MaxPool2d)
     if conv_dropout_p:
-        assert isinstance(model.layer2[next_index + 2], nn.Dropout2d)
-        assert model.layer2[next_index + 2].p == conv_dropout_p
+        assert isinstance(model.convs[1][next_index + 2], nn.Dropout2d)
+        assert model.convs[1][next_index + 2].p == conv_dropout_p
     else:
-        assert not any(isinstance(layer, nn.Dropout2d) for layer in model.layer2)
+        assert not any(isinstance(layer, nn.Dropout2d) for layer in model.convs[1])
 
     assert isinstance(model.fc, nn.Sequential)
     assert isinstance(model.fc[0], nn.Flatten)
     if include_second_fc:
         assert isinstance(model.fc[1], nn.Linear)
-        assert isinstance(model.fc[2], type(ConvNet2L._get_activation(activation_type)))
+        assert isinstance(model.fc[2], type(ConvolutionalNet._get_activation(activation_type)))
         if fc_dropout_p:
             assert isinstance(model.fc[3], nn.Dropout)
             assert model.fc[3].p == fc_dropout_p

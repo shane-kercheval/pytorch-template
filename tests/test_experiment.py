@@ -1,8 +1,8 @@
 """Test the experiment module."""
 import torch
 from torch import nn
-from source.library.architectures import Architecture, FullyConnectedNN, ConvNet2L
-from source.library.data import DIMENSIONS, INPUT_SIZE, OUTPUT_SIZE
+from source.library.architectures import Architecture, FullyConnectedNN, ConvolutionalNet
+from source.library.data import CHANNELS, DIMENSIONS, OUTPUT_SIZE
 from source.library.experiment import (
     train,
     evaluate,
@@ -19,7 +19,8 @@ def test__make_objects__fc__sgd__cpu(mnist_fc):  # noqa
     train_loader = make_loader(x_train, y_train, batch_size=55)
     validation_loader = make_loader(x_val, y_val, batch_size=55)
     model = make_model(
-        input_size=INPUT_SIZE,
+        data_dimensions=DIMENSIONS,
+        in_channels=CHANNELS,
         output_size=OUTPUT_SIZE,
         config = {
             'architecture': Architecture.FULLY_CONNECTED,
@@ -68,7 +69,8 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     train_loader = make_loader(x_train, y_train, batch_size=55)
     validation_loader = make_loader(x_val, y_val, batch_size=55)
     model = make_model(
-        input_size=INPUT_SIZE,
+        data_dimensions=DIMENSIONS,
+        in_channels=CHANNELS,
         output_size=OUTPUT_SIZE,
         config={
             'architecture': Architecture.CONVOLUTIONAL,
@@ -80,16 +82,16 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
     criterion = nn.CrossEntropyLoss()
     optimizer_creator = make_optimizer(optimizer='adam', model=model)
     # test model
-    assert isinstance(model, ConvNet2L)
+    assert isinstance(model, ConvolutionalNet)
     expected_sizes = [(1, 8, 3, 3), (8, 16, 7, 7), (784, OUTPUT_SIZE)]
     actual_sizes = [
-        (model.layer1[0].weight.shape[1], model.layer1[0].weight.shape[0], model.layer1[0].kernel_size[0], model.layer1[0].kernel_size[1]),  # noqa
-        (model.layer2[0].weight.shape[1], model.layer2[0].weight.shape[0], model.layer2[0].kernel_size[0], model.layer2[0].kernel_size[1]),  # noqa
+        (model.convs[0][0].weight.shape[1], model.convs[0][0].weight.shape[0], model.convs[0][0].kernel_size[0], model.convs[0][0].kernel_size[1]),  # noqa
+        (model.convs[1][0].weight.shape[1], model.convs[1][0].weight.shape[0], model.convs[1][0].kernel_size[0], model.convs[1][0].kernel_size[1]),  # noqa
         (model.fc[1].weight.shape[1], model.fc[1].weight.shape[0]),
     ]
     assert expected_sizes == actual_sizes
     # check that the model was sent to the correct device
-    assert model.layer1[0].weight.device.type == device
+    assert model.convs[0][0].weight.device.type == device
     # ensure model can do forward pass given the correct dataset (cnn)
     x_batch, y_batch = next(iter(train_loader))
     x_batch = x_batch.to(device)
@@ -98,10 +100,10 @@ def test__make_objects__cnn__adam__cuda(mnist_cnn):  # noqa
 
     # test loaders
     x_batch, y_batch = next(iter(train_loader))
-    assert list(x_batch.size()) == [55, 1, DIMENSIONS[0], DIMENSIONS[1]]
+    assert list(x_batch.size()) == [55, CHANNELS, DIMENSIONS[0], DIMENSIONS[1]]
     assert len(y_batch) == 55
     x_batch, y_batch = next(iter(validation_loader))
-    assert list(x_batch.size()) == [55, 1, DIMENSIONS[0], DIMENSIONS[1]]
+    assert list(x_batch.size()) == [55, CHANNELS, DIMENSIONS[0], DIMENSIONS[1]]
     assert len(y_batch) == 55
 
     # test criterion
@@ -119,7 +121,8 @@ def test__train__fc(mnist_fc):  # noqa
     train_loader = make_loader(x_train, y_train, batch_size=128)
     validation_loader = make_loader(x_val, y_val, batch_size=128)
     model = make_model(
-        input_size=INPUT_SIZE,
+        data_dimensions=DIMENSIONS,
+        in_channels=CHANNELS,
         output_size=OUTPUT_SIZE,
         config={
             'architecture': Architecture.FULLY_CONNECTED,
@@ -158,7 +161,8 @@ def test__train__cnn(mnist_cnn):  # noqa
     train_loader = make_loader(x_train, y_train, batch_size=128)
     validation_loader = make_loader(x_val, y_val, batch_size=128)
     model = make_model(
-        input_size=INPUT_SIZE,
+        data_dimensions=DIMENSIONS,
+        in_channels=CHANNELS,
         output_size=OUTPUT_SIZE,
         config={
             'architecture': Architecture.CONVOLUTIONAL,
@@ -198,7 +202,8 @@ def test__make_model__fc__default_config(default_fc_run_config, mnist_fc):  # no
     x_train, _, _, _, _, _ = mnist_fc
     default_fc_run_config['device'] = device
     model = make_model(
-        input_size=INPUT_SIZE,
+        data_dimensions=DIMENSIONS,
+        in_channels=CHANNELS,
         output_size=OUTPUT_SIZE,
         config=default_fc_run_config,
     )
@@ -211,7 +216,8 @@ def test__make_model__cnn__default_config(default_cnn_run_config, mnist_cnn):  #
     x_train, _, _, _, _, _ = mnist_cnn
     default_cnn_run_config['device'] = device
     model = make_model(
-        input_size=INPUT_SIZE,
+        data_dimensions=DIMENSIONS,
+        in_channels=CHANNELS,
         output_size=OUTPUT_SIZE,
         config=default_cnn_run_config,
     )

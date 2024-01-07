@@ -13,6 +13,11 @@ In order to use this template you need to sign up for an account in [Weights and
 - `Makefile` contains helpful commands and examples.
 - This repo is meant to be used as a template and starting point, not as a framework. Meaning, the you'll want to 
 
+# Branches
+
+- `mnst-snapshot` contains an example of training a fully-connected and convolutional neural network on the mnist dataset (1 channel; gray)
+- `smile-snapshot`: 
+
 # Example - Running CNN Random Search
 
 In order to use this template you need to sign up for an account in Weights and Biases and ensure

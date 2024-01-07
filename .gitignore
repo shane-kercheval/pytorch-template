@@ -131,6 +131,7 @@ dmypy.json
 
 .vscode/*
 data/raw/*
+data/external/*
 
 !tests/test_files/log.log
 MNIST/*

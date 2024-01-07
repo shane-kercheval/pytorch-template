@@ -2,7 +2,6 @@
 
 from enum import Enum
 import inspect
-import math
 import torch
 from torch import nn
 
@@ -43,20 +42,20 @@ class ModelRegistry:
     def create_instance(
             self,
             architecture: Architecture,
-            input_size: int,
+            data_dimensions: tuple[int, int],
+            in_channels: int,
             output_size: int,
             model_parameters: dict,
-            dimensions: tuple[int, int] | None = None,
             ) -> nn.Module:
         """Create an instance of a model."""
         if architecture not in self._registry:
             raise ValueError(f"Model '{architecture}' not found in registry.")
-        model_parameters['input_size'] = input_size
+        # parameter for fully connected models
+        model_parameters['input_size'] = data_dimensions[0] * data_dimensions[1] * in_channels
+        # parameter for convolutional models
+        model_parameters['dimensions'] = data_dimensions
+        # parameter for all models
         model_parameters['output_size'] = output_size
-        if dimensions is None:
-            dimension = int(math.sqrt(input_size))
-            dimensions = (dimension, dimension)
-        model_parameters['dimensions'] = dimensions
         model_parameters = {
             k: v for k, v in model_parameters.items()
             if k in self.get_parameters(architecture)
@@ -134,12 +133,29 @@ def calculate_same_padding(kernel_size: int, stride: int) -> int:
 
 
 @register_model(Architecture.CONVOLUTIONAL)
-class ConvNet2L(nn.Module):
+class ConvolutionalNet(nn.Module):
     """
-    Convolutional neural network with two convolutional layers e.g.
-    `ConvNet2L(l1_filters=8, l2_filters=16, l1_kernel_size=5, l2_kernel_size=5, classes=10)`.
+    Convolutional neural network with a dynamic number of convolutional layers.
 
-    The `filters` (i.e. out_channels in Pyotorch) parameter specifies the number of filters the
+    For example:
+
+    ```
+    ConvNetDynamic(
+        dimensions=(28, 28),
+        output_size=10,
+        out_channels=(8, 16, 32),
+        kernel_sizes=(5, 5, 3),
+        input_channels=1
+    )
+    ```
+
+    The `out_channels` parameter is a tuple specifying the number of filters for each convolutional
+    layer.
+    The `kernel_sizes` parameter is a tuple specifying the kernel size for each convolutional
+    layer.
+    The length of these tuples determines the number of convolutional layers in the network.
+
+    The out_channels parameter specifies the number of filters the
     convolutional layer will use. This determines the depth of the output feature map, i.e., how
     many distinct feature maps will be produced by the layer. Using more filters in deeper layers
     of a convolutional neural network (CNN) is a common practice. In a CNN, the initial layers
@@ -171,64 +187,45 @@ class ConvNet2L(nn.Module):
             self,
             dimensions: tuple[int, int],
             output_size: int,
-            out_channels: tuple[int, int],
-            kernel_sizes: tuple[int, int],
-            input_channels: int = 1,  # New parameter for input channels
+            out_channels: tuple[int, ...],
+            kernel_sizes: tuple[int, ...],
+            input_channels: int = 1,
             use_batch_norm: bool = False,
-            conv_dropout_p: float | None = None,  # Dropout probability
-            fc_dropout_p: float | None = None,  # Dropout probability
-            activation_type: str = 'relu',  # Type of activation function
-            include_second_fc_layer: bool = False,  # Whether to include a second FC layer
+            conv_dropout_p: float | None = None,
+            fc_dropout_p: float | None = None,
+            activation_type: str = 'relu',
+            include_second_fc_layer: bool = False,
             ):
         super().__init__()
-        l1_out_channels, l2_out_channels = out_channels
-        l1_kernel_size, l2_kernel_size = kernel_sizes
-        stride = 1
-        pool_kernel_size = 2
-        pool_stride = 2
-        padding_1 = calculate_same_padding(l1_kernel_size, stride=stride)
-        padding_2 = calculate_same_padding(l2_kernel_size, stride=stride)
+        if len(out_channels) != len(kernel_sizes):
+            raise ValueError("out_channels and kernel_sizes must be of the same length")
 
-        # build layer 1
-        layers = [
-            nn.Conv2d(
-                in_channels=input_channels,
-                out_channels=l1_out_channels,
-                kernel_size=l1_kernel_size,
-                stride=stride,
-                padding=padding_1,
-            ),
-        ]
-        if use_batch_norm:
-            layers.append(nn.BatchNorm2d(l1_out_channels))
-        layers.append(self._get_activation(activation_type))
-        layers.append(nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride))
-        if conv_dropout_p:
-            layers.append(nn.Dropout2d(p=conv_dropout_p))
-        self.layer1 = nn.Sequential(*layers)
+        self.convs = nn.ModuleList()
+        in_channels = input_channels
 
-        # build layer 2
-        layers = [
-            nn.Conv2d(
-                in_channels=l1_out_channels,
-                out_channels=l2_out_channels,
-                kernel_size=l2_kernel_size,
-                stride=stride,
-                padding=padding_2,
-            ),
-        ]
-        if use_batch_norm:
-            layers.append(nn.BatchNorm2d(l2_out_channels))
-        layers.append(self._get_activation(activation_type))
-        layers.append(nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride))
-        if conv_dropout_p:
-            layers.append(nn.Dropout2d(p=conv_dropout_p))
-        self.layer2 = nn.Sequential(*layers)
+        for c, k in zip(out_channels, kernel_sizes):
+            padding = calculate_same_padding(k, stride=1)
+            layers = [
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=c,
+                    kernel_size=k,
+                    stride=1,
+                    padding=padding,
+                ),
+            ]
+            if use_batch_norm:
+                layers.append(nn.BatchNorm2d(c))
+            layers.append(self._get_activation(activation_type))
+            layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+            if conv_dropout_p:
+                layers.append(nn.Dropout2d(p=conv_dropout_p))
+
+            self.convs.append(nn.Sequential(*layers))
+            in_channels = c
 
         fc_input_size = self._get_linear_input_size(dimensions, input_channels)
-        # Build the fully connected layers
-        fc_layers = []
-        fc_layers.append(nn.Flatten())
+        fc_layers = [nn.Flatten()]
         if include_second_fc_layer:
             second_fc_size = fc_input_size // 2
             fc_layers.extend([
@@ -244,11 +241,11 @@ class ConvNet2L(nn.Module):
 
     def _get_linear_input_size(self, dimensions: tuple[int, int], input_channels: int) -> int:
         """Calculate the input size of the linear layer."""
-        dummy_input = torch.zeros(1, input_channels, dimensions[0], dimensions[1])
+        dummy_input = torch.zeros(1, input_channels, *dimensions)
         with torch.no_grad():
-            dummy_output = self.layer1(dummy_input)
-            dummy_output = self.layer2(dummy_output)
-        return nn.Flatten()(dummy_output).size(1)
+            for conv in self.convs:
+                dummy_input = conv(dummy_input)
+        return nn.Flatten()(dummy_input).size(1)
 
     @staticmethod
     def _get_activation(activation_type: str) -> nn.Module:
@@ -258,8 +255,9 @@ class ConvNet2L(nn.Module):
             return nn.ReLU()
         raise ValueError(f'Unknown activation type: {activation_type}')
 
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass."""
-        out = self.layer1(x)
-        out = self.layer2(out)
-        return self.fc(out)
+        for conv in self.convs:
+            x = conv(x)
+        return self.fc(x)
